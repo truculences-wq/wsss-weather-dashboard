@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WSSS Weather Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f172a;color:#e2e8f0;font-family:'Segoe UI',sans-serif;min-height:100vh;padding:16px;max-width:520px;margin:0 auto}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.clock{font-size:13px;color:#64748b;font-variant-numeric:tabular-nums}
+.badge{background:#1e3a5f;color:#93c5fd;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.card{background:#1e293b;border-radius:16px;padding:18px;margin-bottom:14px;border:1px solid #334155}
+.sn{font-size:11px;color:#64748b;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px}
+.sf{font-size:18px;font-weight:700;color:#e2e8f0;margin-bottom:4px}
+.live{display:inline-block;background:#064e3b;color:#34d399;font-size:11px;padding:2px 8px;border-radius:10px;margin-bottom:12px}
+.tmp{font-size:52px;font-weight:800;color:#4fc3f7;line-height:1;margin-bottom:6px}
+.unit{font-size:28px;color:#94a3b8;font-weight:400}
+.dp{font-size:13px;color:#94a3b8;margin-bottom:18px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0}
+.stat{background:#0f172a;border-radius:10px;padding:12px 14px}
+.sl{font-size:10px;color:#64748b;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.sv{font-size:20px;font-weight:700;color:#e2e8f0}
+.raw-box{background:#0f172a;border-radius:10px;padding:12px;margin-top:12px}
+.raw{font-size:11px;color:#94a3b8;font-family:monospace;word-break:break-all;margin-top:4px}
+.footer{display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:12px;color:#475569}
+.rbtn{background:#1e3a5f;color:#93c5fd;border:none;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px}
+.rbtn:hover{background:#1d4ed8}
+.sec-title{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#64748b;margin-bottom:10px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="clock" id="clk">--:--:-- SGT</div>
+  <span class="badge" id="fc">ASOS</span>
+</div>
+<div class="card">
+  <div class="sn">NOAA ASOS &bull; WSSS</div>
+  <div class="sf">Singapore Changi</div>
+  <div class="live">1-min live data</div>
+  <div class="tmp"><span id="temp">--</span> <span class="unit">&deg;C</span></div>
+  <div class="dp">Dew point: <span id="dp">--</span></div>
+  <div class="grid">
+    <div class="stat"><div class="sl">WIND</div><div class="sv" id="wind">--</div></div>
+    <div class="stat"><div class="sl">PRESSURE</div><div class="sv" id="pres">--</div></div>
+    <div class="stat"><div class="sl">VISIBILITY</div><div class="sv" id="vis">--</div></div>
+    <div class="stat"><div class="sl">MAX TODAY</div><div class="sv" id="tmax">-- &deg;C</div></div>
+  </div>
+  <div class="stat" style="margin-top:8px">
+    <div class="sl">HUMIDITY</div>
+    <div class="sv" id="hum">--%</div>
+    <div id="hbar" style="height:4px;background:#4fc3f7;width:0%;border-radius:2px;margin-top:4px"></div>
+  </div>
+  <div class="raw-box">
+    <div class="sl">RAW ASOS OBSERVATION</div>
+    <div id="raw" class="raw">Loading...</div>
+  </div>
+  <div class="footer">
+    <span>Last observed: <span id="obs">--</span></span>
+    <button onclick="load()" class="rbtn">↻ Refresh</button>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+    <svg width="20" height="20" viewBox="0 0 20 20">
+      <circle cx="10" cy="10" r="8" fill="none" stroke="#1e3a5f" stroke-width="2"/>
+      <circle id="ring" cx="10" cy="10" r="8" fill="none" stroke="#4fc3f7" stroke-width="2"
+        stroke-dasharray="50.27" stroke-dashoffset="0" stroke-linecap="round"
+        transform="rotate(-90 10 10)"/>
+    </svg>
+    <span id="nxt" style="color:#64748b;font-size:12px">Next refresh in 60s</span>
+  </div>
+</div>
+<div class="card">
+  <div class="sec-title">TEMPERATURE HISTORY &bull; WSSS (NOAA ASOS)</div>
+  <div style="height:200px;position:relative">
+    <canvas id="tempChart"></canvas>
+  </div>
+</div>
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div class="sec-title">FORECAST VS OBSERVED &bull; WSSS</div>
+    <span id="fcbadge" style="background:#1e3a5f;color:#93c5fd;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600">-- vs Forecast</span>
+  </div>
+  <div class="dp">Open-Meteo GFS (same model as Windy) vs NOAA ASOS 1-min</div>
+  <div style="height:260px;position:relative;margin-top:12px">
+    <canvas id="compareChart"></canvas>
+  </div>
+</div>
+<script>
+var histChart=null,fcChart=null;
+var obsHistory=[],fcData=null,asosHistory=[],cd=60;
+function fToC(f){return Math.round((f-32)*50/9)/10;}
+function inToHpa(i){return Math.round(i*338639)/10000;}
+function miToKm(m){return Math.round(m*16093)/10000;}
+function pad(n){return n<10?'0'+n:''+n;}
+function nowSGT(){return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Singapore'}));}
+function setText(id,val){var el=document.getElementById(id);if(el)el.textContent=val;}
+
+function load(){
+  var cb='_asos'+Date.now();
+  window[cb]=function(d){
+    try{
+      var obs=d.last_ob;
+      if(!obs)throw new Error('no data');
+      var tempC=obs['airtemp[F]']!=null?fToC(obs['airtemp[F]']):null;
+      var dewC=obs['dewpointtemp[F]']!=null?fToC(obs['dewpointtemp[F]']):null;
+      var wsKph=obs['windspeed[kt]']!=null?Math.round(obs['windspeed[kt]']*1852)/1000:null;
+      var pres=obs['altimeter[in]']!=null?inToHpa(obs['altimeter[in]']):null;
+      var vis=obs['visibility[mile]']!=null?miToKm(obs['visibility[mile]']):null;
+      setText('raw',obs['raw']||'OK');
+      if(tempC!==null){
+        setText('temp',tempC+'\u00b0C');
+        setText('dp',(dewC!==null?dewC:'--')+'\u00b0C');
+        setText('wind',(wsKph!==null?wsKph:'--')+' km/h');
+        setText('pres',(pres!==null?pres:'--')+' hPa');
+        setText('vis',(vis!==null?vis:'--')+' km');
+        var rh=dewC!==null?Math.round(100*Math.exp(17.625*dewC/(243.04+dewC))/Math.exp(17.625*tempC/(243.04+tempC))):null;
+        setText('hum',(rh!==null?rh:'--')+'%');
+        var stored=parseFloat(localStorage.getItem('wsss_tmax')||'-99');
+        var sDate=localStorage.getItem('wsss_tmax_date')||'';
+        var today=nowSGT().toDateString();
+        var mx=sDate===today?Math.max(stored,tempC):tempC;
+        localStorage.setItem('wsss_tmax',mx);
+        localStorage.setItem('wsss_tmax_date',today);
+        setText('tmax',mx+'\u00b0C');
+        var sgt=nowSGT();
+        var lbl=pad(sgt.getHours())+':'+pad(sgt.getMinutes());
+        obsHistory.push({label:lbl,temp:tempC,dew:dewC});
+        if(obsHistory.length>90)obsHistory.shift();
+        updateHistChart();
+        updateFcChart();
+      }
+    }catch(e){setText('raw','Err:'+e.message);}
+    delete window[cb];
+    var el=document.getElementById('_jsp');if(el)el.remove();
+  };
+  var el=document.createElement('script');
+  el.id='_jsp';
+  el.src='https://mesonet.agron.iastate.edu/json/current.py?station=WSSS&network=SG__ASOS&callback='+cb;
+  el.onerror=function(){setText('raw','Network error');delete window[cb];};
+  document.head.appendChild(el);
+}
+
+function updateHistChart(){
+  var labels=obsHistory.map(function(o){return o.label;});
+  var temps=obsHistory.map(function(o){return o.temp;});
+  var dews=obsHistory.map(function(o){return o.dew;});
+  var cv=document.getElementById('tempChart');
+  if(!cv)return;
+  if(!histChart){
+    histChart=new Chart(cv.getContext('2d'),{
+      type:'line',
+      data:{labels:labels,datasets:[
+        {label:'Temp (C)',data:temps,borderColor:'#4fc3f7',backgroundColor:'transparent',pointRadius:3,tension:0.3},
+        {label:'Dew Point (C)',data:dews,borderColor:'#b39ddb',backgroundColor:'transparent',borderDash:[5,3],pointRadius:2,tension:0.3}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        scales:{x:{ticks:{color:'#94a3b8',maxTicksLimit:8},grid:{color:'#1e293b'}},y:{ticks:{color:'#94a3b8',callback:function(v){return v+'C';}},grid:{color:'#1e293b'}}},
+        plugins:{legend:{labels:{color:'#cbd5e1'}}}}
+    });
+  }else{
+    histChart.data.labels=labels;
+    histChart.data.datasets[0].data=temps;
+    histChart.data.datasets[1].data=dews;
+    histChart.update('none');
+  }
+}
+
+function loadAsosHistory(){
+  var now=nowSGT();
+  var dateISO=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate());
+  fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+dateISO)
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(!d||!d.data)return;
+      asosHistory=d.data.filter(function(r){return r.tmpf!=null;}).map(function(r){
+        var ut=new Date(r.utc_valid.replace(' ','T')+':00Z');
+        var st=new Date(ut.toLocaleString('en-US',{timeZone:'Asia/Singapore'}));
+        return{label:pad(st.getHours())+':'+pad(st.getMinutes()),temp:fToC(r.tmpf),dew:r.dwpf!=null?fToC(r.dwpf):null};
+      });
+      updateFcChart();
+    }).catch(function(e){console.warn('History:',e);});
+}
+
+function loadForecast(){
+  fetch('https://api.open-meteo.com/v1/forecast?latitude=1.3644&longitude=103.9915&hourly=temperature_2m&timezone=auto&forecast_days=1')
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var offset=d.utc_offset_seconds||28800;
+      fcData=d.hourly.time.map(function(t,i){
+        var dt=new Date(t+'Z');
+        var ld=new Date(dt.getTime()+(offset*1000));
+        return{label:pad(ld.getUTCHours())+':'+pad(ld.getUTCMinutes()),temp:d.hourly.temperature_2m[i]};
+      });
+      updateFcChart();
+    }).catch(function(e){console.warn('Forecast:',e);});
+}
+
+function updateFcChart(){
+  var obsData=asosHistory.length>5?asosHistory:obsHistory;
+  if(!fcData||obsData.length===0)return;
+  var fcL=fcData.map(function(f){return f.label;});
+  var fcT=fcData.map(function(f){return f.temp;});
+  var om={};
+  obsData.forEach(function(o){
+    var hh=o.label.slice(0,2)+':00';
+    if(!om[hh])om[hh]=[];
+    om[hh].push(o.temp);
+  });
+  var obT=fcL.map(function(l){
+    var a=om[l];if(!a||!a.length)return null;
+    return Math.round(a.reduce(function(x,y){return x+y;},0)/a.length*10)/10;
+  });
+  var df=fcL.map(function(l,i){return obT[i]===null?null:Math.round((obT[i]-fcT[i])*10)/10;});
+  var ld=null;for(var i=df.length-1;i>=0;i--){if(df[i]!==null){ld=df[i];break;}}
+  var bg=document.getElementById('fcbadge');
+  if(bg&&ld!==null){
+    var s=ld>=0?'+':'';
+    bg.textContent=s+ld.toFixed(1)+'C vs Forecast';
+    bg.style.background=Math.abs(ld)<1?'#1e3a5f':Math.abs(ld)<2?'#7c3aed':'#dc2626';
+  }
+  var bc=df.map(function(v){return v===null?'transparent':v>=0?'rgba(74,222,128,0.5)':'rgba(248,113,113,0.5)';});
+  var cv=document.getElementById('compareChart');
+  if(!cv)return;
+  if(!fcChart){
+    fcChart=new Chart(cv.getContext('2d'),{
+      data:{labels:fcL,datasets:[
+        {type:'line',label:'Observed (NOAA ASOS)',data:obT,borderColor:'#4fc3f7',backgroundColor:'transparent',pointRadius:4,tension:0.3,yAxisID:'y'},
+        {type:'line',label:'Forecast (GFS / Windy)',data:fcT,borderColor:'#fb923c',backgroundColor:'transparent',borderDash:[5,3],pointRadius:3,tension:0.4,yAxisID:'y'},
+        {type:'bar',label:'Difference (Obs - Fc)',data:df,backgroundColor:bc,yAxisID:'y2'}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        scales:{
+          x:{ticks:{color:'#94a3b8',maxTicksLimit:12},grid:{color:'#1e293b'}},
+          y:{position:'left',ticks:{color:'#94a3b8',callback:function(v){return v+'C';}},grid:{color:'#1e293b'},title:{display:true,text:'Temperature (C)',color:'#64748b'}},
+          y2:{position:'right',ticks:{color:'#94a3b8',callback:function(v){return v+'C';}},grid:{drawOnChartArea:false},title:{display:true,text:'Difference',color:'#64748b'},min:-5,max:5}
+        },
+        plugins:{legend:{labels:{color:'#cbd5e1'}},tooltip:{mode:'index',intersect:false}}}
+    });
+  }else{
+    fcChart.data.labels=fcL;
+    fcChart.data.datasets[0].data=obT;
+    fcChart.data.datasets[1].data=fcT;
+    fcChart.data.datasets[2].data=df;
+    fcChart.data.datasets[2].backgroundColor=bc;
+    fcChart.update();
+  }
+}
+
+setInterval(function(){
+  var s=nowSGT();
+  var cl=document.getElementById('clk');
+  if(cl)cl.textContent=s.toLocaleTimeString('en-SG',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' SGT';
+},1000);
+
+setInterval(function(){
+  cd--;if(cd<=0){load();cd=60;}
+  var ring=document.getElementById('ring');
+  if(ring)ring.style.strokeDashoffset=50.27*(1-cd/60);
+  var nxt=document.getElementById('nxt');
+  if(nxt)nxt.textContent='Next refresh in '+cd+'s';
+},1000);
+
+loadForecast();
+setInterval(loadForecast,1800000);
+loadAsosHistory();
+setInterval(loadAsosHistory,300000);
+load();
+</script>
+</body>
+</html>
