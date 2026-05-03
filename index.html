@@ -41,7 +41,7 @@ body{background:#222222;color:#EED3BA;font-family:'Inter',sans-serif;overflow-x:
 <div class="controls">
   <button class="rtbn" onclick="load()">Sync Models</button>
   <input type="date" id="datePicker" style="background:#111;color:#fff;border:1px solid #444;padding:6px 12px;border-radius:6px;font-size:13px;font-weight:600">
-  <div style="font-size:11px;color:#666">Scroll &gt; Multi-Model View: METAR vs Meteoblue vs GFS</div>
+  <div style="font-size:12px;color:#888">Scroll &gt; Multi-Model View: METAR vs Meteoblue vs GFS</div>
 </div>
 <div class="meteogram-scroll" id="scrollContainer">
   <div class="chart-wrapper"><canvas id="mainChart"></canvas></div>
@@ -49,7 +49,7 @@ body{background:#222222;color:#EED3BA;font-family:'Inter',sans-serif;overflow-x:
 <script>
 let mainChart;
 const COLORS={gold:'#CAC426',apricot:'#EED3BA',cyan:'#00f2ff',magenta:'#ff00ff',grid:'rgba(255,255,255,0.05)',gray:'#666'};
-function updateClock(){document.getElementById('clk').innerText=new Date().toLocaleTimeString('en-GB',{timeZone:'Asia/Singapore'})+' SGT';}
+function updateClock(){const d=new Date();document.getElementById('clk').innerText=d.toLocaleTimeString('en-GB',{timeZone:'Asia/Singapore'})+' SGT';}
 setInterval(updateClock,1000);updateClock();
 function fToC(f){return((f-32)*5/9);}
 function load(){
@@ -61,8 +61,8 @@ function load(){
       const t=fToC(o['airtemp[F]']||o.tmpf);
       document.getElementById('tmp').innerHTML=`${t.toFixed(1)}<span>°C</span>`;
       updateMeteogram();
-    }
-  }).catch(e=>{status.innerText='API Lags';updateMeteogram();});
+    }else{updateMeteogram();}
+  }).catch(e=>{status.innerText='API Timeout';updateMeteogram();});
 }
 const dp=document.getElementById('datePicker');dp.value=new Date().toISOString().split('T')[0];
 dp.addEventListener('change',updateMeteogram);
@@ -84,10 +84,10 @@ function updateMeteogram(){
     mainChart=new Chart(document.getElementById('mainChart'),{
       type:'line',data:{
         datasets:[
-          {label:'METAR OBSERVED',data:obd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.apricot,borderWidth:4,pointRadius:0,fill:false,tension:0.2,z:4},
-          {label:'SMART PREDICTION',data:pd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.cyan,borderWidth:4,pointRadius:0,fill:false,tension:0.4,z:3},
-          {label:'METEOBLUE MODEL',data:mbd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.magenta,borderDash:[3,3],borderWidth:2,pointRadius:0,fill:false,tension:0.4,z:2},
-          {label:'GFS BASELINE',data:fcd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.gold,borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false,z:1}
+          {label:'METAR OBSERVED',data:obd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.apricot,borderWidth:4,pointRadius:0,fill:false,tension:0.2},
+          {label:'SMART PREDICTION',data:pd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.cyan,borderWidth:4,pointRadius:0,fill:false,tension:0.4},
+          {label:'METEOBLUE MODEL',data:mbd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.magenta,borderDash:[3,3],borderWidth:2,pointRadius:0,fill:false,tension:0.4},
+          {label:'GFS BASELINE',data:fcd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.gold,borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false}
         ]
       },
       options:{
@@ -95,16 +95,21 @@ function updateMeteogram(){
         plugins:{legend:{display:true,position:'top',align:'start',labels:{color:'#888',font:{size:11,weight:700},usePointStyle:true}},tooltip:{backgroundColor:'#111',borderColor:'#333',borderWidth:1,titleFont:{size:14,weight:800},bodyFont:{size:13,family:'monospace'}}},
         scales:{
           x:{type:'time',time:{unit:'hour',stepSize:2,displayFormats:{hour:'HH:mm
-EEE d'}},grid:{color:COLORS.grid},ticks:{color:'#666',font:{size:12,weight:600}}},
+EEE d'}},grid:{color:COLORS.grid},ticks:{color:COLORS.gray,font:{size:12,weight:600}}},
           y:{grid:{color:COLORS.grid},ticks:{color:'#888',font:{size:12}},title:{display:true,text:'TEMPERATURE (°C)',color:'#555',font:{weight:800,size:10}}}
         }
       }
     });
-    document.getElementById('status').innerText='Multi-Sync';
+    document.getElementById('status').innerText='Multi-Sync';document.getElementById('status').style.color='#4ade80';
     if(obd.length>0){
       const lastG=matchingGfs?matchingGfs.v:fcd[0].v;
       const lastM=mbd.find(m=>Math.abs(m.t-lastObs.t)<3600000)?.v||lastG;
       document.getElementById('spread').innerHTML=`${Math.abs(lastG-lastM).toFixed(1)}<span>°C</span>`;
+      const common=obd.filter(o=>fcd.some(g=>Math.abs(g.t-o.t)<300000));
+      if(common.length>0){
+        const rmse=Math.sqrt(common.reduce((s,o)=>{const g=fcd.find(x=>Math.abs(x.t-o.t)<300000);return s+Math.pow(o.v-g.v,2);},0)/common.length);
+        document.getElementById('rmse').innerHTML=`${rmse.toFixed(2)}<span>°C</span>`;
+      }
     }
     const scroll=document.getElementById('scrollContainer');
     const nowPos=(now-fcd[0].t)/(fcd[fcd.length-1].t-fcd[0].t)*4500;
