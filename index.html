@@ -160,23 +160,28 @@ function loadAsosHistory(){
     .then(function(r){return r.json();})
     .then(function(d){
       if(!d||!d.data)return;
+      // Use local_valid directly - format is "YYYY-MM-DDTHH:MM" in Singapore local time
       asosHistory=d.data.filter(function(r){return r.tmpf!=null;}).map(function(r){
-        var ut=new Date(r.utc_valid.replace(' ','T')+':00Z');
-        var st=new Date(ut.toLocaleString('en-US',{timeZone:'Asia/Singapore'}));
-        return{label:pad(st.getHours())+':'+pad(st.getMinutes()),temp:fToC(r.tmpf),dew:r.dwpf!=null?fToC(r.dwpf):null,hour:st.getHours()};
+        var lv=r.local_valid||'';
+        // local_valid is like "2026-05-03T04:00" or "2026-05-03 04:00"
+        var timePart=lv.replace('T',' ').split(' ')[1]||'';
+        var hh=parseInt(timePart.split(':')[0],10)||0;
+        var mm=parseInt(timePart.split(':')[1],10)||0;
+        return{label:pad(hh)+':'+pad(mm),temp:fToC(r.tmpf),dew:r.dwpf!=null?fToC(r.dwpf):null,hour:hh};
       });
       updateFcChart();
     }).catch(function(e){console.warn('History:',e);});
 }
 function loadForecast(){
-  fetch('https://api.open-meteo.com/v1/forecast?latitude=1.3644&longitude=103.9915&hourly=temperature_2m&timezone=auto&forecast_days=1')
+  fetch('https://api.open-meteo.com/v1/forecast?latitude=1.3644&longitude=103.9915&hourly=temperature_2m&timezone=Asia%2FSingapore&forecast_days=1')
     .then(function(r){return r.json();})
     .then(function(d){
-      var offset=d.utc_offset_seconds||28800;
       fcData=d.hourly.time.map(function(t,i){
-        var dt=new Date(t+'Z');
-        var ld=new Date(dt.getTime()+(offset*1000));
-        return{label:pad(ld.getUTCHours())+':'+pad(ld.getUTCMinutes()),temp:d.hourly.temperature_2m[i],hour:ld.getUTCHours()};
+        // time is like "2026-05-03T08:00" in local Singapore time
+        var timePart=t.split('T')[1]||'00:00';
+        var hh=parseInt(timePart.split(':')[0],10);
+        var mm=parseInt(timePart.split(':')[1],10);
+        return{label:pad(hh)+':'+pad(mm),temp:d.hourly.temperature_2m[i],hour:hh};
       });
       updateFcChart();
     }).catch(function(e){console.warn('Forecast:',e);});
@@ -185,27 +190,17 @@ function updateFcChart(){
   var obsData=asosHistory.length>5?asosHistory:obsHistory;
   if(!fcData||obsData.length===0)return;
 
-  // Determine current SGT hour to build a sensible window
-  var nowH=nowSGT().getHours();
-  // Show from max(0, nowH-6) to min(23, nowH+12)
-  var winStart=(nowH-6+24)%24;
-  var winEnd=(nowH+12)%24;
-
-  // Build observed map by hour (HH:00)
+  // Build observed lookup: key = "HH:00", value = avg temp
   var om={};
   obsData.forEach(function(o){
-    var hh=o.label.slice(0,2)+':00';
+    var hh=pad(o.hour!==undefined?o.hour:parseInt(o.label.split(':')[0],10))+':00';
     if(!om[hh])om[hh]=[];
     om[hh].push(o.temp);
   });
 
-  // Filter forecast to window: hours in range [winStart .. winStart+18]
-  var windowHours=[];
-  for(var i=0;i<18;i++){windowHours.push((winStart+i)%24);}
-  var fcFiltered=fcData.filter(function(f){return windowHours.indexOf(f.hour)!==-1;});
-
-  var fcL=fcFiltered.map(function(f){return f.label;});
-  var fcT=fcFiltered.map(function(f){return f.temp;});
+  // Use full forecast day but only show hours 00 to current hour+1 for observed
+  var fcL=fcData.map(function(f){return f.label;});
+  var fcT=fcData.map(function(f){return f.temp;});
 
   var obT=fcL.map(function(l){
     var a=om[l];if(!a||!a.length)return null;
@@ -226,7 +221,7 @@ function updateFcChart(){
   if(!fcChart){
     fcChart=new Chart(cv.getContext('2d'),{
       data:{labels:fcL,datasets:[
-        {type:'line',label:'Observed (NOAA ASOS)',data:obT,borderColor:'#4fc3f7',backgroundColor:'transparent',borderWidth:2,pointRadius:4,tension:0.3,yAxisID:'y',spanGaps:false},
+        {type:'line',label:'Observed (NOAA ASOS)',data:obT,borderColor:'#4fc3f7',backgroundColor:'transparent',borderWidth:2,pointRadius:3,tension:0.3,yAxisID:'y',spanGaps:false},
         {type:'line',label:'Forecast (GFS / Windy)',data:fcT,borderColor:'#fb923c',backgroundColor:'transparent',borderWidth:2,borderDash:[5,3],pointRadius:3,tension:0.4,yAxisID:'y'},
         {type:'bar',label:'Difference (Obs - Fc)',data:df,backgroundColor:bc,yAxisID:'y2'}
       ]},
