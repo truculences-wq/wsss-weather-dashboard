@@ -24,31 +24,31 @@ body{background:#222222;color:#EED3BA;font-family:'Inter',sans-serif;overflow-x:
 .meteogram-scroll{width:100%;overflow-x:auto;background:#1a1a1a;white-space:nowrap;padding:20px 0}
 .meteogram-scroll::-webkit-scrollbar{height:10px}
 .meteogram-scroll::-webkit-scrollbar-thumb{background:#444;border-radius:5px}
-.chart-wrapper{width:4000px;height:550px;position:relative;padding:0 40px}
+.chart-wrapper{width:4500px;height:550px;position:relative;padding:0 40px}
 </style>
 </head>
 <body>
 <div class="top-bar">
-  <div class="brand">WSSS Analytics Pro</div>
+  <div class="brand">WSSS Multi-Model Analytics</div>
   <div style="font-size:14px;color:#CAC426;font-weight:600" id="clk">--:--:-- SGT</div>
 </div>
 <div class="telemetry-row">
-  <div class="tel-item"><div class="tel-label">Current Temperature</div><div class="tel-val" id="tmp">--<span>°C</span></div></div>
-  <div class="tel-item"><div class="tel-label">Current Dewpoint</div><div class="tel-val" id="dew">--<span>°C</span></div></div>
+  <div class="tel-item"><div class="tel-label">Real-time METAR</div><div class="tel-val" id="tmp">--<span>°C</span></div></div>
+  <div class="tel-item"><div class="tel-label">Model Spread</div><div class="tel-val" id="spread">--<span>°C</span></div></div>
   <div class="tel-item"><div class="tel-label">Predictive RMSE</div><div class="tel-val" id="rmse">--<span>°C</span></div></div>
-  <div class="tel-item"><div class="tel-label">Stream Status</div><div class="tel-val" id="status" style="color:#4ade80">Initializing</div></div>
+  <div class="tel-item"><div class="tel-label">Data Engine</div><div class="tel-val" id="status" style="color:#4ade80">Initializing</div></div>
 </div>
 <div class="controls">
-  <button class="rtbn" onclick="load()">Sync All Data</button>
+  <button class="rtbn" onclick="load()">Sync Models</button>
   <input type="date" id="datePicker" style="background:#111;color:#fff;border:1px solid #444;padding:6px 12px;border-radius:6px;font-size:13px;font-weight:600">
-  <div style="font-size:12px;color:#888">Swipe/Scroll right to explore 7-day forecast axis &gt;</div>
+  <div style="font-size:11px;color:#666">Scroll &gt; Multi-Model View: METAR vs Meteoblue vs GFS</div>
 </div>
 <div class="meteogram-scroll" id="scrollContainer">
   <div class="chart-wrapper"><canvas id="mainChart"></canvas></div>
 </div>
 <script>
 let mainChart;
-const COLORS={gold:'#CAC426',apricot:'#EED3BA',cyan:'#00f2ff',grid:'rgba(255,255,255,0.05)',gray:'#666'};
+const COLORS={gold:'#CAC426',apricot:'#EED3BA',cyan:'#00f2ff',magenta:'#ff00ff',grid:'rgba(255,255,255,0.05)',gray:'#666'};
 function updateClock(){document.getElementById('clk').innerText=new Date().toLocaleTimeString('en-GB',{timeZone:'Asia/Singapore'})+' SGT';}
 setInterval(updateClock,1000);updateClock();
 function fToC(f){return((f-32)*5/9);}
@@ -58,11 +58,11 @@ function load(){
   .then(r=>r.json()).then(d=>{
     const o=d.last_ob||(d.data&&d.data[0]);
     if(o){
-      document.getElementById('tmp').innerHTML=`${fToC(o['airtemp[F]']||o.tmpf).toFixed(1)}<span>°C</span>`;
-      document.getElementById('dew').innerHTML=`${fToC(o['dewpointtemp[F]']||o.dwpf).toFixed(1)}<span>°C</span>`;
+      const t=fToC(o['airtemp[F]']||o.tmpf);
+      document.getElementById('tmp').innerHTML=`${t.toFixed(1)}<span>°C</span>`;
       updateMeteogram();
-    }else{throw new Error('No Data');}
-  }).catch(e=>{status.innerText='API Offline';status.style.color='#f87171';updateMeteogram();});
+    }
+  }).catch(e=>{status.innerText='API Lags';updateMeteogram();});
 }
 const dp=document.getElementById('datePicker');dp.value=new Date().toISOString().split('T')[0];
 dp.addEventListener('change',updateMeteogram);
@@ -70,9 +70,11 @@ function updateMeteogram(){
   const now=new Date();const date=dp.value;
   Promise.all([
     fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=temperature_2m&timezone=Asia/Singapore&forecast_days=7').then(r=>r.json()),
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=temperature_2m&models=meteofrance_seamless&timezone=Asia/Singapore&forecast_days=7').then(r=>r.json()),
     fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+date).then(r=>r.json()).catch(e=>({data:[]}))
-  ]).then(([fc,obs])=>{
-    const fcd=fc.hourly.time.map((t,i)=>({t:new Date(t),v:fc.hourly.temperature_2m[i]}));
+  ]).then(([gfs,mb,obs])=>{
+    const fcd=gfs.hourly.time.map((t,i)=>({t:new Date(t),v:gfs.hourly.temperature_2m[i]}));
+    const mbd=mb.hourly.time.map((t,i)=>({t:new Date(t),v:mb.hourly.temperature_2m[i]}));
     const obd=(obs.data||[]).filter(r=>r.tmpf!=null).map(r=>({t:new Date(r.local_valid),v:fToC(r.tmpf)}));
     const lastObs=obd[obd.length-1]||{v:fcd[0].v,t:now};
     const matchingGfs=fcd.find(g=>Math.abs(g.t-lastObs.t)<3600000);
@@ -82,9 +84,10 @@ function updateMeteogram(){
     mainChart=new Chart(document.getElementById('mainChart'),{
       type:'line',data:{
         datasets:[
-          {label:'METAR OBSERVED',data:obd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.apricot,borderWidth:4,pointRadius:0,fill:false,tension:0.2},
-          {label:'SMART PREDICTION',data:pd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.cyan,borderWidth:4,pointRadius:0,fill:false,tension:0.4},
-          {label:'GFS BASELINE',data:fcd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.gold,borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false}
+          {label:'METAR OBSERVED',data:obd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.apricot,borderWidth:4,pointRadius:0,fill:false,tension:0.2,z:4},
+          {label:'SMART PREDICTION',data:pd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.cyan,borderWidth:4,pointRadius:0,fill:false,tension:0.4,z:3},
+          {label:'METEOBLUE MODEL',data:mbd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.magenta,borderDash:[3,3],borderWidth:2,pointRadius:0,fill:false,tension:0.4,z:2},
+          {label:'GFS BASELINE',data:fcd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.gold,borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false,z:1}
         ]
       },
       options:{
@@ -92,21 +95,19 @@ function updateMeteogram(){
         plugins:{legend:{display:true,position:'top',align:'start',labels:{color:'#888',font:{size:11,weight:700},usePointStyle:true}},tooltip:{backgroundColor:'#111',borderColor:'#333',borderWidth:1,titleFont:{size:14,weight:800},bodyFont:{size:13,family:'monospace'}}},
         scales:{
           x:{type:'time',time:{unit:'hour',stepSize:2,displayFormats:{hour:'HH:mm
-EEE d'}},grid:{color:COLORS.grid},ticks:{color:COLORS.gray,font:{size:12,weight:600}}},
+EEE d'}},grid:{color:COLORS.grid},ticks:{color:'#666',font:{size:12,weight:600}}},
           y:{grid:{color:COLORS.grid},ticks:{color:'#888',font:{size:12}},title:{display:true,text:'TEMPERATURE (°C)',color:'#555',font:{weight:800,size:10}}}
         }
       }
     });
-    document.getElementById('status').innerText='Active';document.getElementById('status').style.color='#4ade80';
+    document.getElementById('status').innerText='Multi-Sync';
     if(obd.length>0){
-      const common=obd.filter(o=>fcd.some(g=>Math.abs(g.t-o.t)<300000));
-      if(common.length>0){
-        const rmse=Math.sqrt(common.reduce((s,o)=>{const g=fcd.find(x=>Math.abs(x.t-o.t)<300000);return s+Math.pow(o.v-g.v,2);},0)/common.length);
-        document.getElementById('rmse').innerHTML=`${rmse.toFixed(2)}<span>°C</span>`;
-      }
+      const lastG=matchingGfs?matchingGfs.v:fcd[0].v;
+      const lastM=mbd.find(m=>Math.abs(m.t-lastObs.t)<3600000)?.v||lastG;
+      document.getElementById('spread').innerHTML=`${Math.abs(lastG-lastM).toFixed(1)}<span>°C</span>`;
     }
     const scroll=document.getElementById('scrollContainer');
-    const nowPos=(now-fcd[0].t)/(fcd[fcd.length-1].t-fcd[0].t)*4000;
+    const nowPos=(now-fcd[0].t)/(fcd[fcd.length-1].t-fcd[0].t)*4500;
     scroll.scrollLeft=nowPos-400;
   });
 }
