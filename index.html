@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WSSS Windy Pro Workstation</title>
+<title>WSSS Meteoblue Pro Workstation</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/date-fns@3.0.0/cdn.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -32,7 +32,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;overf
 </head>
 <body data-theme="dark">
 <div class="top-bar">
-  <div class="brand">WSSS Windy Pro v2</div>
+  <div class="brand">WSSS Meteoblue Pro</div>
   <div style="display:flex;align-items:center;gap:15px">
     <div style="font-size:13px;font-weight:600;color:var(--sub)" id="clk">--:-- SGT</div>
     <button class="theme-toggle" onclick="toggleTheme()">DARK MODE</button>
@@ -40,7 +40,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;overf
 </div>
 <div class="telemetry-row">
   <div class="tel-item"><div class="tel-label">Real-time METAR</div><div class="tel-val" id="tmp">--<span>°C</span></div></div>
-  <div class="tel-item"><div class="tel-label">ECMWF / GFS Spread</div><div class="tel-val" id="spread">--<span>°C</span></div></div>
+  <div class="tel-item"><div class="tel-label">Meteoblue / GFS Spread</div><div class="tel-val" id="spread">--<span>°C</span></div></div>
   <div class="tel-item"><div class="tel-label">RMSE Accuracy</div><div class="tel-val" id="rmse">--<span>°C</span></div></div>
   <div class="tel-item"><div class="tel-label">System Stream</div><div class="tel-val" id="status" style="color:#4ade80">Connected</div></div>
 </div>
@@ -100,7 +100,7 @@ function updateMeteogram(){
         datasets:[
           {label:'METAR OBSERVED',data:obd.map(d=>({x:d.t,y:d.v})),borderColor:apricot,borderWidth:4,pointRadius:0,fill:false,tension:0.2,z:4},
           {label:'SMART PREDICTION',data:pd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.cyan,borderWidth:4,pointRadius:0,fill:false,tension:0.4,z:3},
-          {label:'WINDY ECMWF',data:mbd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.magenta,borderDash:[3,3],borderWidth:2,pointRadius:0,fill:false,tension:0.4,z:2},
+          {label:'METEOBLUE MODEL',data:mbd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.magenta,borderDash:[3,3],borderWidth:2,pointRadius:0,fill:false,tension:0.4,z:2},
           {label:'GFS BASELINE',data:fcd.map(d=>({x:d.t,y:d.v})),borderColor:gold,borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false,z:1}
         ]
       },
