@@ -77,13 +77,18 @@ body{background:#0f172a;color:#e2e8f0;font-family:'Segoe UI',sans-serif;min-heig
       <span class="badge" id="fcbadge" style="font-size:11px;">-- vs Forecast</span>
     </div>
   </div>
-  <div style="font-size:11px;color:#64748b;margin-bottom:10px;">Open-Meteo GFS (same model as Windy) vs NOAA ASOS 1-min</div>
+  <div style="font-size:11px;color:#64748b;margin-bottom:10px;">Open-Meteo GFS vs NOAA ASOS</div>
   <div style="position:relative;height:220px;"><canvas id="compareChart"></canvas></div>
+  <div style="margin-top:16px;">
+    <div class="sec-title">Precipitation Forecast vs Observed</div>
+    <div style="position:relative;height:180px;"><canvas id="precipChart"></canvas></div>
+  </div>
 </div>
 <script>
-var histChart=null,fcChart=null;
+var histChart=null,fcChart=null,precipChart=null;
 var obsHistory=[],fcData=null,asosHistory=[],cd=60;
 function fToC(f){return Math.round((f-32)*50/9)/10;}
+function inToMm(i){return Math.round(i*254)/10;}
 function inToHpa(i){return Math.round(i*338639)/10000;}
 function miToKm(m){return Math.round(m*16093)/10000;}
 function pad(n){return n<10?'0'+n:''+n;}
@@ -169,7 +174,8 @@ function loadAsosHistory(dateISO){
         var timePart=lv.replace('T',' ').split(' ')[1]||'';
         var hh=parseInt(timePart.split(':')[0],10)||0;
         var mm=parseInt(timePart.split(':')[1],10)||0;
-        return{label:pad(hh)+':'+pad(mm),temp:fToC(r.tmpf),dew:r.dwpf!=null?fToC(r.dwpf):null,hour:hh};
+        var precipMm=r.p01i!=null?inToMm(r.p01i):null;
+        return{label:pad(hh)+':'+pad(mm),temp:fToC(r.tmpf),dew:r.dwpf!=null?fToC(r.dwpf):null,precip:precipMm,hour:hh};
       });
       updateFcChart();
     }).catch(function(e){console.warn('History:',e);});
@@ -178,8 +184,8 @@ function loadForecast(dateISO){
   dateISO=dateISO||(function(){var n=nowSGT();return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate());})();
   var isToday=(dateISO===nowSGT().toISOString().split('T')[0]);
   var apiUrl=isToday
-    ?'https://api.open-meteo.com/v1/forecast?latitude=1.3644&longitude=103.9915&hourly=temperature_2m&timezone=Asia%2FSingapore&forecast_days=1'
-    :'https://archive-api.open-meteo.com/v1/archive?latitude=1.3644&longitude=103.9915&start_date='+dateISO+'&end_date='+dateISO+'&hourly=temperature_2m&timezone=Asia%2FSingapore';
+    ?'https://api.open-meteo.com/v1/forecast?latitude=1.3644&longitude=103.9915&hourly=temperature_2m,precipitation&timezone=Asia%2FSingapore&forecast_days=1'
+    :'https://archive-api.open-meteo.com/v1/archive?latitude=1.3644&longitude=103.9915&start_date='+dateISO+'&end_date='+dateISO+'&hourly=temperature_2m,precipitation&timezone=Asia%2FSingapore';
   fetch(apiUrl)
     .then(function(r){return r.json();})
     .then(function(d){
@@ -188,7 +194,7 @@ function loadForecast(dateISO){
         var timePart=t.split('T')[1]||'00:00';
         var hh=parseInt(timePart.split(':')[0],10);
         var mm=parseInt(timePart.split(':')[1],10);
-        return{label:pad(hh)+':'+pad(mm),temp:d.hourly.temperature_2m[i],hour:hh};
+        return{label:pad(hh)+':'+pad(mm),temp:d.hourly.temperature_2m[i],precip:d.hourly.precipitation[i],hour:hh};
       });
       updateFcChart();
     }).catch(function(e){console.warn('Forecast:',e);});
@@ -196,16 +202,25 @@ function loadForecast(dateISO){
 function updateFcChart(){
   var obsData=asosHistory.length>5?asosHistory:obsHistory;
   if(!fcData||obsData.length===0)return;
-  var om={};
+  var om={},pm={};
   obsData.forEach(function(o){
     var hh=pad(o.hour!==undefined?o.hour:parseInt(o.label.split(':')[0],10))+':00';
     if(!om[hh])om[hh]=[];
     om[hh].push(o.temp);
+    if(o.precip!==null&&o.precip!==undefined){
+      if(!pm[hh])pm[hh]=[];
+      pm[hh].push(o.precip);
+    }
   });
   var fcL=fcData.map(function(f){return f.label;});
   var fcT=fcData.map(function(f){return f.temp;});
+  var fcP=fcData.map(function(f){return f.precip;});
   var obT=fcL.map(function(l){
     var a=om[l];if(!a||!a.length)return null;
+    return Math.round(a.reduce(function(x,y){return x+y;},0)/a.length*10)/10;
+  });
+  var obP=fcL.map(function(l){
+    var a=pm[l];if(!a||!a.length)return null;
     return Math.round(a.reduce(function(x,y){return x+y;},0)/a.length*10)/10;
   });
   var df=fcL.map(function(l,i){return obT[i]===null?null:Math.round((obT[i]-fcT[i])*10)/10;});
@@ -241,6 +256,27 @@ function updateFcChart(){
     fcChart.data.datasets[2].data=df;
     fcChart.data.datasets[2].backgroundColor=bc;
     fcChart.update();
+  }
+  var pcv=document.getElementById('precipChart');
+  if(!pcv)return;
+  if(!precipChart){
+    precipChart=new Chart(pcv.getContext('2d'),{
+      data:{labels:fcL,datasets:[
+        {type:'bar',label:'Observed (NOAA ASOS)',data:obP,backgroundColor:'rgba(99,179,237,0.6)',borderColor:'#4fc3f7',borderWidth:1},
+        {type:'bar',label:'Forecast (GFS)',data:fcP,backgroundColor:'rgba(251,146,60,0.6)',borderColor:'#fb923c',borderWidth:1}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        scales:{
+          x:{ticks:{color:'#94a3b8',maxTicksLimit:12},grid:{color:'#1e293b'}},
+          y:{ticks:{color:'#94a3b8',callback:function(v){return v+' mm';}},grid:{color:'#1e293b'},title:{display:true,text:'Precipitation (mm)',color:'#64748b'}}
+        },
+        plugins:{legend:{labels:{color:'#cbd5e1'}},tooltip:{mode:'index',intersect:false}}}
+    });
+  }else{
+    precipChart.data.labels=fcL;
+    precipChart.data.datasets[0].data=obP;
+    precipChart.data.datasets[1].data=fcP;
+    precipChart.update();
   }
 }
 function loadHistoricalData(dateStr){
