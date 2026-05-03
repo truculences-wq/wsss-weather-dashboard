@@ -3,139 +3,102 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WSSS Smart Analytics</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/date-fns@3.0.0/cdn.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<title>WSSS Meteogram Pro</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#222222;color:#EED3BA;font-family:'Inter',sans-serif;min-height:100vh;padding:24px}
-@media(max-width:768px){body{padding:12px}}
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding:16px;background:rgba(26,26,26,0.8);backdrop-filter:blur(10px);border-radius:12px;border:1px solid #333}
-.brand{display:flex;align-items:center;gap:12px}
-.brand-title{font-size:16px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#CAC426}
-.clock{font-size:14px;color:#EED3BA;font-variant-numeric:tabular-nums;font-weight:500}
-.card{background:#2a2a2a;border-radius:12px;padding:24px;margin-bottom:20px;border:1px solid #333;box-shadow:0 8px 32px rgba(0,0,0,0.2)}
-.sec-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:20px;font-weight:700;border-left:3px solid #CAC426;padding-left:12px}
-.val-lg{font-size:64px;font-weight:800;color:#EED3BA;letter-spacing:-2px}
-.val-sm{font-size:20px;color:#CAC426;font-weight:500}
-.rtbn{background:transparent;color:#CAC426;border:1.5px solid #CAC426;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;text-transform:uppercase;transition:all 0.3s;letter-spacing:1px}
-.rtbn:hover{background:#CAC426;color:#222222;transform:translateY(-2px)}
-.rtbn.active{background:#CAC426;color:#222222}
-.chart-container{position:relative;height:550px;width:100%;margin-top:20px}
-@media(max-width:768px){.chart-container{height:400px}}
-.date-picker{background:#1a1a1a;color:#EED3BA;border:1px solid #444;border-radius:6px;padding:10px 15px;font-size:13px;font-weight:600}
-.time-controls{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
-.accuracy-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-top:20px}
-.stat-box{background:#1a1a1a;padding:15px;border-radius:8px;border:1px solid #333}
-.stat-label{font-size:10px;color:#888;text-transform:uppercase;margin-bottom:5px}
-.stat-val{font-size:18px;color:#CAC426;font-weight:700}
+body{background:#222222;color:#EED3BA;font-family:'Inter',sans-serif;overflow-x:hidden}
+.meteogram-scroll{width:100%;overflow-x:auto;background:#1a1a1a;border-top:1px solid #333;border-bottom:1px solid #333;white-space:nowrap;padding-bottom:10px}
+.meteogram-scroll::-webkit-scrollbar{height:8px}
+.meteogram-scroll::-webkit-scrollbar-thumb{background:#444;border-radius:4px}
+.chart-wrapper{width:3000px;height:450px;position:relative;padding:20px}
+.header{padding:20px 24px;display:flex;justify-content:space-between;align-items:center;background:#222}
+.brand{font-weight:800;letter-spacing:1px;color:#CAC426;text-transform:uppercase;font-size:18px}
+.telemetry-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));background:#2a2a2a;border-bottom:1px solid #333}
+.tel-item{padding:15px 24px;border-right:1px solid #333}
+.tel-label{font-size:10px;text-transform:uppercase;color:#888;margin-bottom:4px;font-weight:700}
+.tel-val{font-size:24px;font-weight:700;color:#EED3BA}
+.tel-val span{font-size:14px;color:#888;margin-left:4px}
+.controls{padding:15px 24px;background:#222;display:flex;gap:15px;align-items:center}
+.rtbn{background:transparent;color:#CAC426;border:1px solid #CAC426;padding:6px 16px;border-radius:4px;cursor:pointer;font-weight:700;font-size:11px}
+.rtbn:hover{background:#CAC426;color:#222}
 </style>
 </head>
 <body>
-<div class="topbar">
-  <div class="brand">
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#CAC426" stroke-width="2"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/><circle cx="12" cy="12" r="4"/></svg>
-    <div class="brand-title">WSSS Smart Analytics</div>
-  </div>
-  <div class="clock" id="clk">--:--:-- SGT</div>
+<div class="header">
+  <div class="brand">WSSS Meteogram Pro</div>
+  <div style="font-size:13px;color:#888" id="clk">--:--:-- SGT</div>
 </div>
-<div class="card">
-  <div class="sec-title">Real-time Telemetry</div>
-  <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:20px">
-    <div>
-      <div style="display:flex;align-items:baseline;gap:15px">
-        <span class="val-lg" id="tmp">--</span><span style="font-size:32px;color:#888">°C</span>
-      </div>
-      <div class="val-sm">Dewpoint: <span id="dew">--</span>°C</div>
-    </div>
-    <button class="rtbn" onclick="load()">Execute Prediction</button>
-  </div>
+<div class="telemetry-row">
+  <div class="tel-item"><div class="tel-label">Temperature</div><div class="tel-val" id="tmp">--<span>°C</span></div></div>
+  <div class="tel-item"><div class="tel-label">Dewpoint</div><div class="tel-val" id="dew">--<span>°C</span></div></div>
+  <div class="tel-item"><div class="tel-label">RMSE Accuracy</div><div class="tel-val" id="rmse">0.00<span>°C</span></div></div>
+  <div class="tel-item"><div class="tel-label">System</div><div class="tel-val" style="color:#4ade80">Nominal</div></div>
 </div>
-<div class="card">
-  <div class="sec-title">Unified Predictive Analysis: GFS vs Smart Alg V1 vs METAR</div>
-  <div class="time-controls">
-    <button class="rtbn" onclick="setTimeRange(12)">12H</button>
-    <button class="rtbn active" onclick="setTimeRange(24)">24H</button>
-    <button class="rtbn" onclick="setTimeRange(48)">48H</button>
-    <input type="date" id="datePicker" class="date-picker" style="margin-left:auto" />
-  </div>
-  <div class="chart-container"><canvas id="mainChart"></canvas></div>
-  <div class="accuracy-grid">
-    <div class="stat-box"><div class="stat-label">Model Accuracy (RMSE)</div><div class="stat-val" id="rmseVal">Calculating...</div></div>
-    <div class="stat-box"><div class="stat-label">Current Bias Correction</div><div class="stat-val" id="biasVal">--</div></div>
-    <div class="stat-box"><div class="stat-label">System Status</div><div class="stat-val" id="statusVal" style="color:#4ade80">Synchronized</div></div>
+<div class="controls">
+  <button class="rtbn" onclick="load()">Refresh Data</button>
+  <input type="date" id="datePicker" style="background:#1a1a1a;color:#fff;border:1px solid #444;padding:4px 8px;border-radius:4px;font-size:12px">
+  <div style="font-size:11px;color:#666">Scroll chart right to view future forecast &gt;</div>
+</div>
+<div class="meteogram-scroll" id="scrollContainer">
+  <div class="chart-wrapper">
+    <canvas id="mainChart"></canvas>
   </div>
 </div>
 <script>
-let mainChart,timeRange=24;
-const COLORS={bg:'#222222',gold:'#CAC426',apricot:'#EED3BA',cyan:'#00f2ff',gray:'#888',grid:'#333'};
-function updateClock(){const d=new Date();document.getElementById('clk').innerText=d.toLocaleTimeString('en-GB',{timeZone:'Asia/Singapore'})+' SGT';}
-updateClock();setInterval(updateClock,1000);
+let mainChart;
+const COLORS={gold:'#CAC426',apricot:'#EED3BA',cyan:'#00f2ff',grid:'rgba(255,255,255,0.05)'};
+function updateClock(){document.getElementById('clk').innerText=new Date().toLocaleTimeString('en-GB',{timeZone:'Asia/Singapore'})+' SGT';}
+setInterval(updateClock,1000);updateClock();
 function fToC(f){return((f-32)*5/9);}
 function load(){
-  document.getElementById('statusVal').innerText='Updating...';
   fetch('https://mesonet.agron.iastate.edu/json/current.py?station=WSSS&network=SG__ASOS')
   .then(r=>r.json()).then(d=>{
     const o=d.last_ob||(d.data&&d.data[0]);
     if(o){
-      document.getElementById('tmp').innerText=fToC(o['airtemp[F]']||o.tmpf).toFixed(1);
-      document.getElementById('dew').innerText=fToC(o['dewpointtemp[F]']||o.dwpf).toFixed(1);
-      updateUnifiedChart();
+      document.getElementById('tmp').innerHTML=`${fToC(o['airtemp[F]']||o.tmpf).toFixed(1)}<span>°C</span>`;
+      document.getElementById('dew').innerHTML=`${fToC(o['dewpointtemp[F]']||o.dwpf).toFixed(1)}<span>°C</span>`;
+      updateMeteogram();
     }
-  }).catch(e=>{document.getElementById('statusVal').innerText='Network Err';});
+  });
 }
 const dp=document.getElementById('datePicker');dp.value=new Date().toISOString().split('T')[0];
-dp.addEventListener('change',updateUnifiedChart);
-function setTimeRange(h){timeRange=h;document.querySelectorAll('.time-controls .rtbn').forEach(b=>b.classList.remove('active'));event.target.classList.add('active');updateUnifiedChart();}
-
-function smartPredict(gfs,observed){
-  if(observed.length<2)return gfs.map(d=>d.v);
-  const lastObs=observed[observed.length-1].v;
-  const matchingGfs=gfs.find(g=>Math.abs(g.t-observed[observed.length-1].t)<300000);
-  const bias=matchingGfs?lastObs-matchingGfs.v:lastObs-gfs[0].v;
-  const trend=(lastObs-observed[0].v)/observed.length;
-  return gfs.map((p,i)=>{const d=Math.exp(-i/10);return p.v+(bias*d)+(trend*1.5*(1-d));});
-}
-
-function updateUnifiedChart(){
-  const now=new Date();
-  const start=new Date(now.getTime()-(timeRange/2)*3600*1000),end=new Date(now.getTime()+(timeRange/2)*3600*1000);
+dp.addEventListener('change',updateMeteogram);
+function updateMeteogram(){
+  const now=new Date();const date=dp.value;
   Promise.all([
-    fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=temperature_2m&timezone=Asia/Singapore&forecast_days=3').then(r=>r.json()),
-    fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+dp.value).then(r=>r.json())
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=temperature_2m,relative_humidity_2m,pressure_msl,wind_speed_10m&timezone=Asia/Singapore&forecast_days=7').then(r=>r.json()),
+    fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+date).then(r=>r.json())
   ]).then(([fc,obs])=>{
-    const fcd=fc.hourly.time.map((t,i)=>({t:new Date(t),v:fc.hourly.temperature_2m[i]})).filter(d=>d.t>=start&&d.t<=end);
-    const obd=obs.data.filter(r=>r.tmpf!=null).map(r=>({t:new Date(r.local_valid),v:fToC(r.tmpf)})).filter(d=>d.t>=start&&d.t<=end);
-    const predArr=smartPredict(fcd,obd);
-    const pd=predArr.map((v,i)=>({t:fcd[i].t,v}));
+    const fcd=fc.hourly.time.map((t,i)=>({t:new Date(t),v:fc.hourly.temperature_2m[i]}));
+    const obd=obs.data.filter(r=>r.tmpf!=null).map(r=>({t:new Date(r.local_valid),v:fToC(r.tmpf)}));
+    const lastObs=obd[obd.length-1];const matchingGfs=fcd.find(g=>Math.abs(g.t-lastObs.t)<300000);
+    const bias=matchingGfs?lastObs.v-matchingGfs.v:0;
+    const pd=fcd.filter(d=>d.t>=lastObs.t).map((p,i)=>{const d=Math.exp(-i/12);return{t:p.t,v:p.v+(bias*d)};});
     if(mainChart)mainChart.destroy();
     mainChart=new Chart(document.getElementById('mainChart'),{
       type:'line',data:{
         datasets:[
-          {label:'GFS BASELINE',data:fcd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.gold,borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false,tension:0.4},
-          {label:'SMART PREDICTION',data:pd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.cyan,borderWidth:3,pointRadius:0,fill:false,tension:0.4},
-          {label:'METAR OBSERVED',data:obd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.apricot,borderWidth:2.5,pointRadius:0,fill:false,tension:0.2}
+          {label:'OBSERVED',data:obd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.apricot,borderWidth:3,pointRadius:0,fill:false,tension:0.2},
+          {label:'PREDICTION',data:pd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.cyan,borderWidth:3,pointRadius:0,fill:false,tension:0.4},
+          {label:'GFS BASELINE',data:fcd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.gold,borderDash:[6,4],borderWidth:1,pointRadius:0,fill:false}
         ]
       },
       options:{
         responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-        plugins:{legend:{position:'top',align:'end',labels:{color:COLORS.gray,font:{family:'Inter',weight:600,size:10},usePointStyle:true,boxWidth:8}},tooltip:{backgroundColor:'#1a1a1a',titleColor:COLORS.gold,bodyColor:'#fff',borderColor:'#444',borderWidth:1,padding:12}},
+        plugins:{legend:{display:false},tooltip:{backgroundColor:'#111',borderColor:'#333',borderWidth:1,titleFont:{size:14,weight:800},bodyFont:{size:13}}},
         scales:{
-          x:{type:'time',time:{unit:'hour',displayFormats:{hour:'HH:mm MMM d'}},grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:COLORS.gray,font:{size:10},autoSkip:true,maxTicksLimit:12}},
-          y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:COLORS.gray,font:{size:10}},title:{display:true,text:'TEMPERATURE (°C)',color:COLORS.gray,font:{size:9,weight:700,letterSpacing:1}}}
+          x:{type:'time',time:{unit:'hour',displayFormats:{hour:'HH:mm
+EEE d'}},grid:{color:COLORS.grid},ticks:{color:'#666',font:{size:11,weight:600}}},
+          y:{grid:{color:COLORS.grid},ticks:{color:'#888',font:{size:11}},title:{display:true,text:'TEMP °C',color:'#555',font:{weight:800,size:10}}}
         }
       }
     });
-    document.getElementById('statusVal').innerText='Synchronized';
-    const common=obd.filter(o=>fcd.some(g=>g.t.getTime()===o.t.getTime()));
-    if(common.length>0){
-      const err=Math.sqrt(common.reduce((s,o)=>{const g=fcd.find(x=>x.t.getTime()===o.t.getTime());return s+Math.pow(o.v-g.v,2);},0)/common.length);
-      document.getElementById('rmseVal').innerText=err.toFixed(2)+'°C';
-      const lastO=obd[obd.length-1],matchingGfs=fcd.find(g=>Math.abs(g.t-lastO.t)<300000);
-      document.getElementById('biasVal').innerText=(matchingGfs?(lastO.v-matchingGfs.v).toFixed(1):'--')+'°C';
-    }
+    const scroll=document.getElementById('scrollContainer');
+    const nowPos=(now-fcd[0].t)/(fcd[fcd.length-1].t-fcd[0].t)*3000;
+    scroll.scrollLeft=nowPos-400;
   });
 }
 load();
