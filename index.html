@@ -3,74 +3,85 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WSSS Analytics Pro</title>
+<title>WSSS Windy Pro Workstation</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/date-fns@3.0.0/cdn.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+:root{--bg:#222222;--card:#2a2a2a;--text:#EED3BA;--sub:#888;--gold:#CAC426;--border:#333;--grid:rgba(255,255,255,0.05);--scroll:#444}
+[data-theme='light']{--bg:#f8fafc;--card:#ffffff;--text:#1e293b;--sub:#64748b;--gold:#857f00;--border:#e2e8f0;--grid:rgba(0,0,0,0.05);--scroll:#cbd5e1}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#222222;color:#EED3BA;font-family:'Inter',sans-serif;overflow-x:hidden}
-.top-bar{padding:20px 24px;display:flex;justify-content:space-between;align-items:center;background:#1a1a1a;border-bottom:1px solid #333}
-.brand{font-weight:800;letter-spacing:1px;color:#CAC426;text-transform:uppercase;font-size:18px}
-.telemetry-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));background:#2a2a2a;border-bottom:1px solid #333}
-.tel-item{padding:20px 24px;border-right:1px solid #333}
-.tel-label{font-size:10px;text-transform:uppercase;color:#888;margin-bottom:6px;font-weight:700;letter-spacing:1px}
-.tel-val{font-size:28px;font-weight:800;color:#EED3BA}
-.tel-val span{font-size:14px;color:#888;margin-left:5px}
-.controls{padding:15px 24px;background:#222;display:flex;gap:15px;align-items:center;border-bottom:1px solid #333}
-.rtbn{background:transparent;color:#CAC426;border:1.5px solid #CAC426;padding:8px 20px;border-radius:6px;cursor:pointer;font-weight:800;font-size:12px;text-transform:uppercase;transition:all 0.2s}
-.rtbn:hover{background:#CAC426;color:#222}
-.meteogram-scroll{width:100%;overflow-x:auto;background:#1a1a1a;white-space:nowrap;padding:20px 0}
-.meteogram-scroll::-webkit-scrollbar{height:10px}
-.meteogram-scroll::-webkit-scrollbar-thumb{background:#444;border-radius:5px}
-.chart-wrapper{width:4500px;height:550px;position:relative;padding:0 40px}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;overflow-x:hidden;transition:background 0.3s,color 0.3s}
+.top-bar{padding:15px 24px;display:flex;justify-content:space-between;align-items:center;background:var(--card);border-bottom:1px solid var(--border)}
+.brand{font-weight:800;letter-spacing:1px;color:var(--gold);text-transform:uppercase;font-size:16px}
+.theme-toggle{background:var(--bg);color:var(--text);border:1px solid var(--border);padding:5px 12px;border-radius:20px;cursor:pointer;font-size:11px;font-weight:700}
+.telemetry-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));background:var(--card);border-bottom:1px solid var(--border)}
+.tel-item{padding:18px 24px;border-right:1px solid var(--border)}
+.tel-label{font-size:10px;text-transform:uppercase;color:var(--sub);margin-bottom:6px;font-weight:700;letter-spacing:1px}
+.tel-val{font-size:26px;font-weight:800}
+.tel-val span{font-size:14px;color:var(--sub);margin-left:4px}
+.controls{padding:12px 24px;background:var(--bg);display:flex;gap:15px;align-items:center;border-bottom:1px solid var(--border)}
+.rtbn{background:transparent;color:var(--gold);border:1.5px solid var(--gold);padding:6px 16px;border-radius:6px;cursor:pointer;font-weight:800;font-size:11px;text-transform:uppercase}
+.rtbn:hover{background:var(--gold);color:var(--bg)}
+.meteogram-scroll{width:100%;overflow-x:auto;background:var(--bg);white-space:nowrap;padding:20px 0}
+.meteogram-scroll::-webkit-scrollbar{height:8px}
+.meteogram-scroll::-webkit-scrollbar-thumb{background:var(--scroll);border-radius:4px}
+.chart-wrapper{width:4500px;height:500px;position:relative;padding:0 40px}
 </style>
 </head>
-<body>
+<body data-theme="dark">
 <div class="top-bar">
-  <div class="brand">WSSS Multi-Model Analytics</div>
-  <div style="font-size:14px;color:#CAC426;font-weight:600" id="clk">--:--:-- SGT</div>
+  <div class="brand">WSSS Windy Pro v2</div>
+  <div style="display:flex;align-items:center;gap:15px">
+    <div style="font-size:13px;font-weight:600;color:var(--sub)" id="clk">--:-- SGT</div>
+    <button class="theme-toggle" onclick="toggleTheme()">DARK MODE</button>
+  </div>
 </div>
 <div class="telemetry-row">
   <div class="tel-item"><div class="tel-label">Real-time METAR</div><div class="tel-val" id="tmp">--<span>°C</span></div></div>
-  <div class="tel-item"><div class="tel-label">Wind Speed</div><div class="tel-val" id="wind">--<span>kt</span></div></div>
-  <div class="tel-item"><div class="tel-label">Pressure</div><div class="tel-val" id="pres">--<span>hPa</span></div></div>
-  <div class="tel-item"><div class="tel-label">Engine</div><div class="tel-val" id="status" style="color:#4ade80">Windy Professional</div></div>
+  <div class="tel-item"><div class="tel-label">ECMWF / GFS Spread</div><div class="tel-val" id="spread">--<span>°C</span></div></div>
+  <div class="tel-item"><div class="tel-label">RMSE Accuracy</div><div class="tel-val" id="rmse">--<span>°C</span></div></div>
+  <div class="tel-item"><div class="tel-label">System Stream</div><div class="tel-val" id="status" style="color:#4ade80">Connected</div></div>
 </div>
 <div class="controls">
-  <button class="rtbn" onclick="load()">Sync All Data</button>
-  <input type="date" id="datePicker" style="background:#111;color:#fff;border:1px solid #444;padding:6px 12px;border-radius:6px;font-size:13px;font-weight:600">
-  <div style="font-size:12px;color:#888">Swipe/Scroll right to explore high-res Windy GFS/ECMWF axis &gt;</div>
+  <button class="rtbn" onclick="load()">Sync Models</button>
+  <input type="date" id="datePicker" style="background:var(--card);color:var(--text);border:1px solid var(--border);padding:5px 10px;border-radius:4px;font-size:12px;font-weight:700">
+  <div style="font-size:11px;color:var(--sub)">Scroll right for 7-day Multi-Model Timeline &gt;</div>
 </div>
 <div class="meteogram-scroll" id="scrollContainer">
   <div class="chart-wrapper"><canvas id="mainChart"></canvas></div>
 </div>
 <script>
-let mainChart;
-const COLORS={gold:'#CAC426',apricot:'#EED3BA',cyan:'#00f2ff',magenta:'#ff00ff',grid:'rgba(255,255,255,0.05)',gray:'#666'};
+let mainChart;const COLORS={cyan:'#00f2ff',magenta:'#ff00ff',apricot:'#EED3BA'};
+function toggleTheme(){
+  const b=document.body;const isDark=b.getAttribute('data-theme')==='dark';
+  b.setAttribute('data-theme',isDark?'light':'dark');
+  document.querySelector('.theme-toggle').innerText=isDark?'LIGHT MODE':'DARK MODE';
+  updateMeteogram();
+}
 function updateClock(){document.getElementById('clk').innerText=new Date().toLocaleTimeString('en-GB',{timeZone:'Asia/Singapore'})+' SGT';}
 setInterval(updateClock,1000);updateClock();
 function fToC(f){return((f-32)*5/9);}
 function load(){
-  const status=document.getElementById('status');status.innerText='Fetching...';
-  const windyKey='ZcWkjbIW1RTcrFOg6dRiGSexus6VmH0u'; 
+  document.getElementById('status').innerText='Updating...';
   fetch('https://mesonet.agron.iastate.edu/json/current.py?station=WSSS&network=SG__ASOS')
   .then(r=>r.json()).then(d=>{
     const o=d.last_ob||(d.data&&d.data[0]);
     if(o){
       const t=fToC(o['airtemp[F]']||o.tmpf);
       document.getElementById('tmp').innerHTML=`${t.toFixed(1)}<span>°C</span>`;
-      document.getElementById('wind').innerHTML=`${o.sknt||'--'}<span>kt</span>`;
-      document.getElementById('pres').innerHTML=`${o.mslp||'--'}<span>hPa</span>`;
-      updateMeteogram(windyKey);
+      updateMeteogram();
     }
-  }).catch(e=>{status.innerText='API Lags';updateMeteogram(windyKey);});
+  }).catch(e=>{updateMeteogram();});
 }
 const dp=document.getElementById('datePicker');dp.value=new Date().toISOString().split('T')[0];
-dp.addEventListener('change',()=>updateMeteogram('ZcWkjbIW1RTcrFOg6dRiGSexus6VmH0u'));
-function updateMeteogram(key){
+dp.addEventListener('change',updateMeteogram);
+function updateMeteogram(){
   const now=new Date();const date=dp.value;
+  const isDark=document.body.getAttribute('data-theme')==='dark';
+  const gold=isDark?'#CAC426':'#857f00';const grid=isDark?'rgba(255,255,255,0.05)':'rgba(0,0,0,0.05)';
+  const apricot=isDark?'#EED3BA':'#1e293b';
   Promise.all([
     fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=temperature_2m&timezone=Asia/Singapore&forecast_days=7').then(r=>r.json()),
     fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=temperature_2m&models=meteofrance_seamless&timezone=Asia/Singapore&forecast_days=7').then(r=>r.json()),
@@ -87,23 +98,33 @@ function updateMeteogram(key){
     mainChart=new Chart(document.getElementById('mainChart'),{
       type:'line',data:{
         datasets:[
-          {label:'WINDY ADJUSTED (GFS)',data:pd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.cyan,borderWidth:4,pointRadius:0,fill:false,tension:0.4,z:4},
-          {label:'METAR OBSERVED',data:obd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.apricot,borderWidth:4,pointRadius:0,fill:false,tension:0.2,z:3},
-          {label:'WINDY ECMWF (MB)',data:mbd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.magenta,borderDash:[3,3],borderWidth:2,pointRadius:0,fill:false,tension:0.4,z:2},
-          {label:'GFS BASELINE',data:fcd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.gold,borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false,z:1}
+          {label:'METAR OBSERVED',data:obd.map(d=>({x:d.t,y:d.v})),borderColor:apricot,borderWidth:4,pointRadius:0,fill:false,tension:0.2,z:4},
+          {label:'SMART PREDICTION',data:pd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.cyan,borderWidth:4,pointRadius:0,fill:false,tension:0.4,z:3},
+          {label:'WINDY ECMWF',data:mbd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.magenta,borderDash:[3,3],borderWidth:2,pointRadius:0,fill:false,tension:0.4,z:2},
+          {label:'GFS BASELINE',data:fcd.map(d=>({x:d.t,y:d.v})),borderColor:gold,borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false,z:1}
         ]
       },
       options:{
         responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',intersect:false},
-        plugins:{legend:{display:true,position:'top',align:'start',labels:{color:'#888',font:{size:11,weight:700},usePointStyle:true}},tooltip:{backgroundColor:'#111',borderColor:'#333',borderWidth:1,titleFont:{size:14,weight:800},bodyFont:{size:13,family:'monospace'}}},
+        plugins:{legend:{display:true,position:'top',align:'start',labels:{color:isDark?'#888':'#64748b',font:{size:11,weight:700}}},tooltip:{backgroundColor:isDark?'#111':'#fff',borderColor:isDark?'#333':'#cbd5e1',borderWidth:1,titleColor:gold,bodyColor:isDark?'#fff':'#1e293b'}},
         scales:{
-          x:{type:'time',time:{unit:'hour',stepSize:2,displayFormats:{hour:'HH:mm
-EEE d'}},grid:{color:COLORS.grid},ticks:{color:COLORS.gray,font:{size:12,weight:600}}},
-          y:{grid:{color:COLORS.grid},ticks:{color:'#888',font:{size:12}},title:{display:true,text:'TEMPERATURE (°C)',color:'#555',font:{weight:800,size:10}}}
+          x:{type:'time',time:{unit:'hour',stepSize:2,displayFormats:{hour:'HH:mm\
+EEE d'}},grid:{color:grid},ticks:{color:isDark?'#666':'#94a3b8',font:{size:12,weight:600}}},
+          y:{grid:{color:grid},ticks:{color:isDark?'#888':'#94a3b8'},title:{display:true,text:'TEMP (°C)',color:isDark?'#555':'#cbd5e1',font:{weight:800,size:10}}}
         }
       }
     });
-    document.getElementById('status').innerText='Active ('+key.substring(0,4)+'...)';document.getElementById('status').style.color='#4ade80';
+    document.getElementById('status').innerText='Active Stream';document.getElementById('status').style.color='#4ade80';
+    if(obd.length>0){
+      const lastG=matchingGfs?matchingGfs.v:fcd[0].v;
+      const lastM=mbd.find(m=>Math.abs(m.t-lastObs.t)<3600000)?.v||lastG;
+      document.getElementById('spread').innerHTML=`${Math.abs(lastG-lastM).toFixed(1)}<span>°C</span>`;
+      const common=obd.filter(o=>fcd.some(g=>Math.abs(g.t-o.t)<300000));
+      if(common.length>0){
+        const rmse=Math.sqrt(common.reduce((s,o)=>{const g=fcd.find(x=>Math.abs(x.t-o.t)<300000);return s+Math.pow(o.v-g.v,2);},0)/common.length);
+        document.getElementById('rmse').innerHTML=`${rmse.toFixed(2)}<span>°C</span>`;
+      }
+    }
     const scroll=document.getElementById('scrollContainer');
     const nowPos=(now-fcd[0].t)/(fcd[fcd.length-1].t-fcd[0].t)*4500;
     scroll.scrollLeft=nowPos-400;
