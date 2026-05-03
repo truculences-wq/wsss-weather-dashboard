@@ -28,6 +28,8 @@ body{background:#0f172a;color:#e2e8f0;font-family:'Segoe UI',sans-serif;min-heig
 .rbtn{background:#1e3a5f;color:#93c5fd;border:none;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px}
 .rbtn:hover{background:#1d4ed8}
 .sec-title{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#64748b;margin-bottom:10px}
+.date-picker{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;margin-left:8px}
+.date-picker::-webkit-calendar-picker-indicator{filter:invert(1)}
 </style>
 </head>
 <body>
@@ -70,7 +72,10 @@ body{background:#0f172a;color:#e2e8f0;font-family:'Segoe UI',sans-serif;min-heig
 <div class="card">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
     <div class="sec-title" style="margin-bottom:0">Forecast vs Observed &bull; WSSS</div>
-    <span class="badge" id="fcbadge" style="font-size:11px;">-- vs Forecast</span>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <input type="date" class="date-picker" id="histDate" onchange="loadHistoricalData(this.value)" />
+      <span class="badge" id="fcbadge" style="font-size:11px;">-- vs Forecast</span>
+    </div>
   </div>
   <div style="font-size:11px;color:#64748b;margin-bottom:10px;">Open-Meteo GFS (same model as Windy) vs NOAA ASOS 1-min</div>
   <div style="position:relative;height:220px;"><canvas id="compareChart"></canvas></div>
@@ -97,8 +102,8 @@ function load(){
       var vis=obs['visibility[mile]']!=null?miToKm(obs['visibility[mile]']):null;
       setText('raw',obs['raw']||'OK');
       if(tempC!==null){
-        setText('temp',tempC+'°C');
-        setText('dp',(dewC!==null?dewC:'--')+'°C');
+        setText('temp',tempC+'\u00b0C');
+        setText('dp',(dewC!==null?dewC:'--')+'\u00b0C');
         setText('wind',(wsKph!==null?wsKph:'--')+' km/h');
         setText('pres',(pres!==null?pres:'--')+' hPa');
         setText('vis',(vis!==null?vis:'--')+' km');
@@ -110,7 +115,7 @@ function load(){
         var mx=sDate===today?Math.max(stored,tempC):tempC;
         localStorage.setItem('wsss_tmax',mx);
         localStorage.setItem('wsss_tmax_date',today);
-        setText('tmax',mx+'°C');
+        setText('tmax',mx+'\u00b0C');
         var sgt=nowSGT();
         var lbl=pad(sgt.getHours())+':'+pad(sgt.getMinutes());
         setText('lobs',lbl);
@@ -153,17 +158,14 @@ function updateHistChart(){
     histChart.update('none');
   }
 }
-function loadAsosHistory(){
-  var now=nowSGT();
-  var dateISO=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate());
+function loadAsosHistory(dateISO){
+  dateISO=dateISO||(function(){var n=nowSGT();return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate());})();
   fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+dateISO)
     .then(function(r){return r.json();})
     .then(function(d){
       if(!d||!d.data)return;
-      // Use local_valid directly - format is "YYYY-MM-DDTHH:MM" in Singapore local time
       asosHistory=d.data.filter(function(r){return r.tmpf!=null;}).map(function(r){
         var lv=r.local_valid||'';
-        // local_valid is like "2026-05-03T04:00" or "2026-05-03 04:00"
         var timePart=lv.replace('T',' ').split(' ')[1]||'';
         var hh=parseInt(timePart.split(':')[0],10)||0;
         var mm=parseInt(timePart.split(':')[1],10)||0;
@@ -172,12 +174,17 @@ function loadAsosHistory(){
       updateFcChart();
     }).catch(function(e){console.warn('History:',e);});
 }
-function loadForecast(){
-  fetch('https://api.open-meteo.com/v1/forecast?latitude=1.3644&longitude=103.9915&hourly=temperature_2m&timezone=Asia%2FSingapore&forecast_days=1')
+function loadForecast(dateISO){
+  dateISO=dateISO||(function(){var n=nowSGT();return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate());})();
+  var isToday=(dateISO===nowSGT().toISOString().split('T')[0]);
+  var apiUrl=isToday
+    ?'https://api.open-meteo.com/v1/forecast?latitude=1.3644&longitude=103.9915&hourly=temperature_2m&timezone=Asia%2FSingapore&forecast_days=1'
+    :'https://archive-api.open-meteo.com/v1/archive?latitude=1.3644&longitude=103.9915&start_date='+dateISO+'&end_date='+dateISO+'&hourly=temperature_2m&timezone=Asia%2FSingapore';
+  fetch(apiUrl)
     .then(function(r){return r.json();})
     .then(function(d){
+      if(!d||!d.hourly||!d.hourly.time)return;
       fcData=d.hourly.time.map(function(t,i){
-        // time is like "2026-05-03T08:00" in local Singapore time
         var timePart=t.split('T')[1]||'00:00';
         var hh=parseInt(timePart.split(':')[0],10);
         var mm=parseInt(timePart.split(':')[1],10);
@@ -189,24 +196,18 @@ function loadForecast(){
 function updateFcChart(){
   var obsData=asosHistory.length>5?asosHistory:obsHistory;
   if(!fcData||obsData.length===0)return;
-
-  // Build observed lookup: key = "HH:00", value = avg temp
   var om={};
   obsData.forEach(function(o){
     var hh=pad(o.hour!==undefined?o.hour:parseInt(o.label.split(':')[0],10))+':00';
     if(!om[hh])om[hh]=[];
     om[hh].push(o.temp);
   });
-
-  // Use full forecast day but only show hours 00 to current hour+1 for observed
   var fcL=fcData.map(function(f){return f.label;});
   var fcT=fcData.map(function(f){return f.temp;});
-
   var obT=fcL.map(function(l){
     var a=om[l];if(!a||!a.length)return null;
     return Math.round(a.reduce(function(x,y){return x+y;},0)/a.length*10)/10;
   });
-
   var df=fcL.map(function(l,i){return obT[i]===null?null:Math.round((obT[i]-fcT[i])*10)/10;});
   var ld=null;for(var i=df.length-1;i>=0;i--){if(df[i]!==null){ld=df[i];break;}}
   var bg=document.getElementById('fcbadge');
@@ -241,6 +242,11 @@ function updateFcChart(){
     fcChart.data.datasets[2].backgroundColor=bc;
     fcChart.update();
   }
+}
+function loadHistoricalData(dateStr){
+  if(!dateStr)return;
+  loadAsosHistory(dateStr);
+  loadForecast(dateStr);
 }
 setInterval(function(){
   var s=nowSGT();
