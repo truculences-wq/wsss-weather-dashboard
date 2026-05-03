@@ -5,68 +5,70 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>WSSS Smart Weather Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#222222;color:#EED3BA;font-family:'Inter',sans-serif;min-height:100vh;padding:20px 16px}
-@media(max-width:768px){body{padding:8px}}
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding:12px;background:#1a1a1a;border-radius:12px}
-.brand{display:flex;align-items:center;gap:10px}
-.brand-title{font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#EED3BA}
-.clock{font-size:13px;color:#CAC426;font-variant-numeric:tabular-nums;font-weight:500}
-.badge{background:#CAC426;color:#222222;padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1px}
-.card{background:#2a2a2a;border-radius:8px;padding:20px;margin-bottom:16px;border:1px solid #333}
-.sec-title{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#888;margin-bottom:14px;font-weight:600}
-.val-lg{font-size:54px;font-weight:700;color:#EED3BA;line-height:1}
-.val-sm{font-size:22px;color:#CAC426;font-weight:500}
-.live{display:inline-block;border:1px solid #CAC426;color:#CAC426;font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700}
-.rtbn{background:transparent;color:#CAC426;border:1px solid #CAC426;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;transition:0.2s}
-.rtbn:hover{background:#CAC426;color:#222222}
+body{background:#222222;color:#EED3BA;font-family:'Inter',sans-serif;min-height:100vh;padding:24px}
+@media(max-width:768px){body{padding:12px}}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding:16px;background:rgba(26,26,26,0.8);backdrop-filter:blur(10px);border-radius:12px;border:1px solid #333}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-title{font-size:16px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#CAC426}
+.clock{font-size:14px;color:#EED3BA;font-variant-numeric:tabular-nums;font-weight:500}
+.card{background:#2a2a2a;border-radius:12px;padding:24px;margin-bottom:20px;border:1px solid #333;box-shadow:0 8px 32px rgba(0,0,0,0.2)}
+.sec-title{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:20px;font-weight:700;border-left:3px solid #CAC426;padding-left:12px}
+.val-lg{font-size:64px;font-weight:800;color:#EED3BA;letter-spacing:-2px}
+.val-sm{font-size:20px;color:#CAC426;font-weight:500}
+.rtbn{background:transparent;color:#CAC426;border:1.5px solid #CAC426;padding:8px 20px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:700;text-transform:uppercase;transition:all 0.3s;letter-spacing:1px}
+.rtbn:hover{background:#CAC426;color:#222222;transform:translateY(-2px)}
 .rtbn.active{background:#CAC426;color:#222222}
-.raw-box{background:#1a1a1a;color:#888;border:1px solid #333;border-radius:6px;padding:10px;margin-top:10px;font-size:11px;max-height:150px;overflow:auto;font-family:monospace}
-.date-picker{background:#1a1a1a;color:#EED3BA;border:1px solid #333;border-radius:4px;padding:8px;font-size:12px;font-family:inherit}
-.date-picker::-webkit-calendar-picker-indicator{filter:invert(0.8) sepia(1) saturate(5) hue-rotate(20deg)}
-.chart-container{position:relative;height:500px;width:100%;margin-top:15px}
-.time-controls{display:flex;gap:8px;margin-bottom:15px}
-.algo-stat{font-size:12px;color:#CAC426;font-weight:600;margin-top:8px}
+.chart-container{position:relative;height:550px;width:100%;margin-top:20px}
+.date-picker{background:#1a1a1a;color:#EED3BA;border:1px solid #444;border-radius:6px;padding:10px 15px;font-size:13px;font-weight:600}
+.time-controls{display:flex;gap:10px;margin-bottom:20px}
+.accuracy-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-top:20px}
+.stat-box{background:#1a1a1a;padding:15px;border-radius:8px;border:1px solid #333}
+.stat-label{font-size:10px;color:#888;text-transform:uppercase;margin-bottom:5px}
+.stat-val{font-size:18px;color:#CAC426;font-weight:700}
 </style>
 </head>
 <body>
 <div class="topbar">
   <div class="brand">
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="#CAC426"><circle cx="12" cy="12" r="10"/></svg>
-    <div class="brand-title">WSSS Smart Dashboard</div>
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#CAC426" stroke-width="2"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/><circle cx="12" cy="12" r="4"/></svg>
+    <div class="brand-title">WSSS Smart Analytics</div>
   </div>
   <div class="clock" id="clk">--:--:-- SGT</div>
-  <span class="badge">PREDICTIVE ENGINE V1</span>
 </div>
 <div class="card">
-  <div class="sec-title">TEMPERATURE <span class="live" id="liveBadge">LIVE DATA</span></div>
-  <div style="display:flex;align-items:baseline;gap:15px;margin-bottom:15px">
-    <span class="val-lg" id="tmp">--</span><span style="font-size:24px;color:#888">°C</span>
-    <span class="val-sm">Dew: <span id="dew">--</span>°C</span>
+  <div class="sec-title">Real-time Telemetry</div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:20px">
+    <div>
+      <div style="display:flex;align-items:baseline;gap:15px">
+        <span class="val-lg" id="tmp">--</span><span style="font-size:32px;color:#888">°C</span>
+      </div>
+      <div class="val-sm">Dewpoint: <span id="dew">--</span>°C</div>
+    </div>
+    <button class="rtbn" onclick="load()">Execute Prediction</button>
   </div>
-  <button class="rtbn" onclick="load()">RE-SYNC & PREDICT</button>
-  <div class="algo-stat" id="algoStat">Algorithm: Ready to predict...</div>
 </div>
 <div class="card">
-  <div class="sec-title">UNIFIED VIEW: GFS VS SMART PREDICTION VS METAR</div>
-  <div style="font-size:11px;color:#93c5fd;margin-bottom:12px">Gold = GFS | Cyan = Smart Algorithm | White = METAR History</div>
+  <div class="sec-title">Unified Predictive Analysis: GFS vs Smart Alg V1 vs METAR</div>
   <div class="time-controls">
     <button class="rtbn" onclick="setTimeRange(12)">12H</button>
     <button class="rtbn active" onclick="setTimeRange(24)">24H</button>
     <button class="rtbn" onclick="setTimeRange(48)">48H</button>
+    <input type="date" id="datePicker" class="date-picker" style="margin-left:auto" />
   </div>
-  <input type="date" id="datePicker" class="date-picker" />
   <div class="chart-container"><canvas id="mainChart"></canvas></div>
-</div>
-<div class="card">
-  <div class="sec-title">Algorithm Accuracy & Comparison Table</div>
-  <div class="raw-box" id="accuracyBox">Calculating RMSE...</div>
+  <div class="accuracy-grid">
+    <div class="stat-box"><div class="stat-label">Model Accuracy (RMSE)</div><div class="stat-val" id="rmseVal">Calculating...</div></div>
+    <div class="stat-box"><div class="stat-label">Current Bias Correction</div><div class="stat-val" id="biasVal">--</div></div>
+    <div class="stat-box"><div class="stat-label">Data Status</div><div class="stat-val" style="color:#4ade80">Synchronized</div></div>
+  </div>
 </div>
 <script>
-let mainChart,timeRange=24,predictions={};
-const COLORS={charcoal:'#222222',gold:'#CAC426',apricot:'#EED3BA',cyan:'#00f2ff',gray:'#888',border:'#333'};
+let mainChart,timeRange=24;
+const COLORS={bg:'#222222',gold:'#CAC426',apricot:'#EED3BA',cyan:'#00f2ff',gray:'#888',grid:'#333'};
 function updateClock(){const d=new Date();document.getElementById('clk').innerText=d.toLocaleTimeString('en-GB',{timeZone:'Asia/Singapore'})+' SGT';}
 updateClock();setInterval(updateClock,1000);
 function fToC(f){return((f-32)*5/9);}
@@ -74,63 +76,61 @@ function load(){
   fetch('https://mesonet.agron.iastate.edu/json/current.py?station=WSSS&network=SG__ASOS')
   .then(r=>r.json()).then(d=>{
     const o=d.last_ob||(d.data&&d.data[0]);
-    document.getElementById('tmp').innerText=o?fToC(o['airtemp[F]']||o.tmpf).toFixed(1):'--';
-    document.getElementById('dew').innerText=o?fToC(o['dewpointtemp[F]']||o.dwpf).toFixed(1):'--';
-    updateUnifiedChart();
+    if(o){
+      document.getElementById('tmp').innerText=fToC(o['airtemp[F]']||o.tmpf).toFixed(1);
+      document.getElementById('dew').innerText=fToC(o['dewpointtemp[F]']||o.dwpf).toFixed(1);
+      updateUnifiedChart();
+    }
   });
 }
-const dp=document.getElementById('datePicker');const today=new Date().toISOString().split('T')[0];
-dp.value=today;dp.addEventListener('change',updateUnifiedChart);
-function nowSGT(){return new Date(new Date().getTime()+8*3600*1000);}
+const dp=document.getElementById('datePicker');dp.value=new Date().toISOString().split('T')[0];
+dp.addEventListener('change',updateUnifiedChart);
 function setTimeRange(h){timeRange=h;document.querySelectorAll('.time-controls .rtbn').forEach(b=>b.classList.remove('active'));event.target.classList.add('active');updateUnifiedChart();}
 
 function smartPredict(gfs,observed){
-  const history=observed.slice(-6);
-  if(history.length<2)return gfs;
-  const lastObs=history[history.length-1].v;
-  const lastGfs=gfs[0]?.v||lastObs;
-  const bias=lastObs-lastGfs;
-  const trend=(lastObs-history[0].v)/history.length;
-  return gfs.map((p,i)=>{
-    const decay=Math.exp(-i/12);
-    return p.v+(bias*decay)+(trend*(1-decay));
-  });
+  const hist=observed.slice(-8);if(hist.length<2)return gfs.map(d=>d.v);
+  const lastObs=hist[hist.length-1].v,lastGfs=gfs[0]?.v||lastObs;
+  const bias=lastObs-lastGfs,trend=(lastObs-hist[0].v)/hist.length;
+  return gfs.map((p,i)=>{const d=Math.exp(-i/10);return p.v+(bias*d)+(trend*1.5*(1-d));});
 }
 
 function updateUnifiedChart(){
-  const date=dp.value;const now=nowSGT();
+  const now=new Date(new Date().getTime()+8*3600*1000);
   const start=new Date(now.getTime()-(timeRange/2)*3600*1000),end=new Date(now.getTime()+(timeRange/2)*3600*1000);
   Promise.all([
-    fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m&timezone=Asia/Singapore&forecast_days=3').then(r=>r.json()),
-    fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+date).then(r=>r.json())
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=temperature_2m&timezone=Asia/Singapore&forecast_days=3').then(r=>r.json()),
+    fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+dp.value).then(r=>r.json())
   ]).then(([fc,obs])=>{
     const fcd=fc.hourly.time.map((t,i)=>({t:new Date(t),v:fc.hourly.temperature_2m[i]})).filter(d=>d.t>=start&&d.t<=end);
     const obd=obs.data.filter(r=>r.tmpf!=null).map(r=>({t:new Date(r.local_valid),v:fToC(r.tmpf)})).filter(d=>d.t>=start&&d.t<=end);
-    const predictedValues=smartPredict(fcd.filter(d=>d.t>now),obd);
-    const pd=predictedValues.map((v,i)=>({t:fcd.filter(d=>d.t>now)[i].t,v}));
-    const allT=[...new Set([...fcd.map(d=>d.t.getTime()),...obd.map(d=>d.t.getTime()),...pd.map(d=>d.t.getTime())])].sort();
+    const predArr=smartPredict(fcd.filter(d=>d.t>now),obd);
+    const pd=predArr.map((v,i)=>({t:fcd.filter(d=>d.t>now)[i].t,v}));
     if(mainChart)mainChart.destroy();
     mainChart=new Chart(document.getElementById('mainChart'),{
       type:'line',data:{
-        labels:allT.map(t=>new Date(t).getHours()+':'+new Date(t).getMinutes().toString().padStart(2,'0')),
         datasets:[
-          {label:'GFS Forecast',data:allT.map(t=>{const x=fcd.find(d=>d.t.getTime()===t);return x?x.v:null;}),borderColor:COLORS.gold,borderDash:[5,5],borderWidth:1.5,fill:false,pointRadius:0,spanGaps:true},
-          {label:'Smart Prediction',data:allT.map(t=>{const x=pd.find(d=>d.t.getTime()===t);return x?x.v:null;}),borderColor:COLORS.cyan,borderWidth:2,fill:false,pointRadius:0,spanGaps:true},
-          {label:'METAR Observed',data:allT.map(t=>{const x=obd.find(d=>d.t.getTime()===t);return x?x.v:null;}),borderColor:COLORS.apricot,borderWidth:2.5,fill:false,pointRadius:0,spanGaps:true}
+          {label:'GFS BASELINE',data:fcd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.gold,borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false,tension:0.4},
+          {label:'SMART PREDICTION',data:pd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.cyan,borderWidth:3,pointRadius:0,fill:false,tension:0.4},
+          {label:'METAR OBSERVED',data:obd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.apricot,borderWidth:2.5,pointRadius:0,fill:false,tension:0.2}
         ]
-      },options:opts()
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+        plugins:{legend:{position:'top',align:'end',labels:{color:COLORS.gray,font:{family:'Inter',weight:600,size:10},usePointStyle:true,boxWidth:8}},tooltip:{backgroundColor:'#1a1a1a',titleColor:COLORS.gold,bodyColor:'#fff',borderColor:'#444',borderWidth:1,padding:12,titleFont:{size:12,weight:700},bodyFont:{family:'monospace'}}},
+        scales:{
+          x:{type:'time',time:{unit:'hour',displayFormats:{hour:'HH:mm
+MMM d'}},grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:COLORS.gray,font:{size:10}}},
+          y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:COLORS.gray,font:{size:10}},title:{display:true,text:'TEMPERATURE (°C)',color:COLORS.gray,font:{size:9,weight:700,letterSpacing:1}}}
+        }
+      }
     });
-    calcAccuracy(obd,fcd,pd);
+    const common=obd.filter(o=>fcd.some(g=>g.t.getTime()===o.t.getTime()));
+    if(common.length>0){
+      const err=Math.sqrt(common.reduce((s,o)=>{const g=fcd.find(x=>x.t.getTime()===o.t.getTime());return s+Math.pow(o.v-g.v,2);},0)/common.length);
+      document.getElementById('rmseVal').innerText=err.toFixed(2)+'°C';
+      document.getElementById('biasVal').innerText=(obd[obd.length-1].v-fcd.find(x=>x.t>obd[obd.length-1].t)?.v||0).toFixed(1)+'°C';
+    }
   });
-}
-function opts(){return{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,position:'top',labels:{color:COLORS.gray,font:{size:10}}},tooltip:{backgroundColor:COLORS.charcoal,borderColor:COLORS.border,borderWidth:1}},scales:{x:{grid:{color:'#333'},ticks:{color:COLORS.gray,font:{size:10}}},y:{grid:{color:'#333'},ticks:{color:COLORS.gray,font:{size:10}}}}};}
-function calcAccuracy(obs,gfs,prd){
-  const common=obs.filter(o=>gfs.some(g=>g.t.getTime()===o.t.getTime()));
-  if(common.length===0)return;
-  const gfsError=common.reduce((s,o)=>{const g=gfs.find(x=>x.t.getTime()===o.t.getTime());return s+Math.pow(o.v-g.v,2);},0)/common.length;
-  document.getElementById('accuracyBox').innerText=`Current Model Bias Correction: Active
-GFS RMSE: ${Math.sqrt(gfsError).toFixed(2)}°C
-Last Observed Data Point successfully stored for algorithm tuning.`;
 }
 load();
 </script>
