@@ -84,21 +84,23 @@ function load(){
       document.getElementById('dew').innerText=fToC(o['dewpointtemp[F]']||o.dwpf).toFixed(1);
       updateUnifiedChart();
     }
-  }).catch(e=>{document.getElementById('statusVal').innerText='Network Err';document.getElementById('statusVal').style.color='#f87171';});
+  }).catch(e=>{document.getElementById('statusVal').innerText='Network Err';});
 }
 const dp=document.getElementById('datePicker');dp.value=new Date().toISOString().split('T')[0];
 dp.addEventListener('change',updateUnifiedChart);
 function setTimeRange(h){timeRange=h;document.querySelectorAll('.time-controls .rtbn').forEach(b=>b.classList.remove('active'));event.target.classList.add('active');updateUnifiedChart();}
 
 function smartPredict(gfs,observed){
-  const hist=observed.slice(-8);if(hist.length<2)return gfs.map(d=>d.v);
-  const lastObs=hist[hist.length-1].v,lastGfs=gfs[0]?.v||lastObs;
-  const bias=lastObs-lastGfs,trend=(lastObs-hist[0].v)/hist.length;
+  if(observed.length<2)return gfs.map(d=>d.v);
+  const lastObs=observed[observed.length-1].v;
+  const matchingGfs=gfs.find(g=>Math.abs(g.t-observed[observed.length-1].t)<300000);
+  const bias=matchingGfs?lastObs-matchingGfs.v:lastObs-gfs[0].v;
+  const trend=(lastObs-observed[0].v)/observed.length;
   return gfs.map((p,i)=>{const d=Math.exp(-i/10);return p.v+(bias*d)+(trend*1.5*(1-d));});
 }
 
 function updateUnifiedChart(){
-  const now=new Date(new Date().getTime()+8*3600*1000);
+  const now=new Date();
   const start=new Date(now.getTime()-(timeRange/2)*3600*1000),end=new Date(now.getTime()+(timeRange/2)*3600*1000);
   Promise.all([
     fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=temperature_2m&timezone=Asia/Singapore&forecast_days=3').then(r=>r.json()),
@@ -106,8 +108,8 @@ function updateUnifiedChart(){
   ]).then(([fc,obs])=>{
     const fcd=fc.hourly.time.map((t,i)=>({t:new Date(t),v:fc.hourly.temperature_2m[i]})).filter(d=>d.t>=start&&d.t<=end);
     const obd=obs.data.filter(r=>r.tmpf!=null).map(r=>({t:new Date(r.local_valid),v:fToC(r.tmpf)})).filter(d=>d.t>=start&&d.t<=end);
-    const predArr=smartPredict(fcd.filter(d=>d.t>now),obd);
-    const pd=predArr.map((v,i)=>({t:fcd.filter(d=>d.t>now)[i].t,v}));
+    const predArr=smartPredict(fcd,obd);
+    const pd=predArr.map((v,i)=>({t:fcd[i].t,v}));
     if(mainChart)mainChart.destroy();
     mainChart=new Chart(document.getElementById('mainChart'),{
       type:'line',data:{
@@ -127,12 +129,11 @@ function updateUnifiedChart(){
       }
     });
     document.getElementById('statusVal').innerText='Synchronized';
-    document.getElementById('statusVal').style.color='#4ade80';
     const common=obd.filter(o=>fcd.some(g=>g.t.getTime()===o.t.getTime()));
     if(common.length>0){
       const err=Math.sqrt(common.reduce((s,o)=>{const g=fcd.find(x=>x.t.getTime()===o.t.getTime());return s+Math.pow(o.v-g.v,2);},0)/common.length);
       document.getElementById('rmseVal').innerText=err.toFixed(2)+'°C';
-      const lastO=obd[obd.length-1],matchingGfs=fcd.find(g=>g.t.getTime()===lastO.t.getTime());
+      const lastO=obd[obd.length-1],matchingGfs=fcd.find(g=>Math.abs(g.t-lastO.t)<300000);
       document.getElementById('biasVal').innerText=(matchingGfs?(lastO.v-matchingGfs.v).toFixed(1):'--')+'°C';
     }
   });
