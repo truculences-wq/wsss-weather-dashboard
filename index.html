@@ -8,18 +8,25 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#0f172a;color:#e2e8f0;font-family:'Segoe UI',sans-serif;min-height:100vh;padding:16px}
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+@media(max-width:768px){body{padding:8px}}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px}
 .clock{font-size:13px;color:#64748b;font-variant-numeric:tabular-nums}
 .badge{background:#1e3a5f;color:#93c5fd;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600}
 .card{background:#1e293b;border-radius:16px;padding:18px;margin-bottom:14px;border:1px solid #334155}
+@media(max-width:768px){.card{padding:12px}}
 .sec-title{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#64748b;margin-bottom:12px}
 .live{display:inline-block;background:#0b4e3b;color:#34d399;font-size:11px;padding:2px 8px;border-radius:8px}
-.rtbn{background:#1e3a5f;color:#93c5fd;border:none;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px}
+.error{display:inline-block;background:#7f1d1d;color:#fca5a5;font-size:11px;padding:2px 8px;border-radius:8px}
+.rtbn{background:#1e3a5f;color:#93c5fd;border:none;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;margin-right:6px}
 .rtbn:hover{background:#1d4ed8}
+.rtbn.active{background:#1d4ed8}
 .raw-box{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:6px;margin-top:8px;font-size:11px;max-height:120px;overflow:auto}
 .date-picker{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:6px}
 .date-picker::-webkit-calendar-picker-indicator{filter:invert(1)}
 .chart-container{position:relative;height:300px;width:100%}
+@media(max-width:768px){.chart-container{height:250px}}
+.loading{color:#64748b;font-size:13px;padding:8px}
+.time-controls{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -28,19 +35,20 @@ body{background:#0f172a;color:#e2e8f0;font-family:'Segoe UI',sans-serif;min-heig
   <span class="badge" id="fc">ASOS</span>
 </div>
 <div class="card">
-  <div class="sec-title">TEMPERATURE <span class="live">1-min live data</span></div>
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+  <div class="sec-title">TEMPERATURE <span class="live" id="liveBadge">1-MIN LIVE DATA</span></div>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap">
     <span style="font-size:48px;font-weight:600" id="tmp">--</span><span class="unit">&deg;C</span>
     <span style="font-size:24px;color:#64748b">Dew: <span id="dew">--</span>&deg;C</span>
   </div>
   <button class="rtbn" onclick="load()">&#x21bb; Refresh</button>
 </div>
 <div class="card">
-  <div class="sec-title"><div class="s">Raw ASOS Observation</div><div class="raw" id="raw">Loading...</div></div>
-  <span>Last observed: <span id="lobs">--</span></span>
-  <button class="rtbn" onclick="load()">&#x21bb; Refresh</button>
+  <div class="sec-title">RAW ASOS OBSERVATION</div>
+  <div class="raw-box" id="raw">Loading...</div>
+  <span style="font-size:11px;color:#64748b">Last observed: <span id="lobs">--</span></span>
+  <button class="rtbn" onclick="load()" style="margin-top:8px">&#x21bb; Refresh</button>
 </div>
-<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
   <svg width="36" height="36" viewBox="0 0 36 36">
     <circle cx="18" cy="18" r="16" fill="none" stroke="#1e293b" stroke-width="3"/>
     <circle id="ring" cx="18" cy="18" r="16" fill="none" stroke="#4fc3f7" stroke-width="3" stroke-dasharray="100,53" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 18 18)"/>
@@ -49,45 +57,58 @@ body{background:#0f172a;color:#e2e8f0;font-family:'Segoe UI',sans-serif;min-heig
 </div>
 <div class="card">
   <div class="sec-title">Temperature History &bull; WSSS (NOAA ASOS)</div>
-  <input type="date" id="datePicker" class="date-picker" onchange="loadHistoricalData()" />
+  <input type="date" id="datePicker" class="date-picker" />
   <div class="raw-box"><div class="chart-container"><canvas id="histChart"></canvas></div></div>
 </div>
 <div class="card">
   <div class="sec-title">FORECAST VS OBSERVED &bull; WSSS</div>
   <div style="font-size:11px;color:#93c5fd;margin-bottom:4px">Open-Meteo GFS (same model as Windy) vs NOAA ASOS 1-min</div>
+  <div class="time-controls">
+    <button class="rtbn" onclick="setTimeRange(6)">6h</button>
+    <button class="rtbn" onclick="setTimeRange(12)">12h</button>
+    <button class="rtbn active" onclick="setTimeRange(24)">24h</button>
+    <button class="rtbn" onclick="setTimeRange(48)">48h</button>
+  </div>
   <input type="date" id="dateISO" class="date-picker" />
   <div class="raw-box"><div class="chart-container"><canvas id="tempChart"></canvas></div></div>
 </div>
 <div class="card">
   <div class="sec-title">PRECIPITATION (FORECAST VS OBSERVED) &bull; WSSS</div>
-  <div style="font-size:11px;color:#93c5fd;margin-bottom:4px">Open-Meteo GFS vs Singapore NEA Rainfall</div>
+  <div style="font-size:11px;color:#93c5fd;margin-bottom:4px">Open-Meteo GFS vs Archive Precipitation Data</div>
   <div class="raw-box"><div class="chart-container"><canvas id="precipChart"></canvas></div></div>
 </div>
 <script>
-let histChart,tempChart,precipChart;
+let histChart,tempChart,precipChart,timeRange=24,cache={};
 function updateClock(){const d=new Date();const h=d.getHours().toString().padStart(2,'0'),m=d.getMinutes().toString().padStart(2,'0'),s=d.getSeconds().toString().padStart(2,'0');document.getElementById('clk').innerText=h+':'+m+':'+s+' SGT';}
 updateClock();setInterval(updateClock,1000);
 
+function getCache(key){const c=cache[key];if(c&&Date.now()-c.time<300000)return c.data;return null;}
+function setCache(key,data){cache[key]={data,time:Date.now()};}
+
 function load(){
+  const liveBadge=document.getElementById('liveBadge');
+  liveBadge.className='loading';
+  liveBadge.innerText='LOADING...';
   fetch('https://mesonet.agron.iastate.edu/json/current.py?station=WSSS&network=SG__ASOS&callback=')
   .then(r=>r.json())
   .then(d=>{
-    if(!d||!d.data)return;
+    if(!d||!d.data||!d.data[0]){liveBadge.className='error';liveBadge.innerText='API ERROR';return;}
     const o=d.data[0];
-    if(!o)return;
     const tmpC=o.tmpf!=null?fToC(o.tmpf):null;
     const dewC=o.dwpf!=null?fToC(o.dwpf):null;
     document.getElementById('tmp').innerText=tmpC!=null?tmpC.toFixed(1):'--';
     document.getElementById('dew').innerText=dewC!=null?dewC.toFixed(1):'--';
     document.getElementById('lobs').innerText=o.local_valid||'--';
     document.getElementById('raw').innerText=JSON.stringify(o,null,2);
+    liveBadge.className='live';
+    liveBadge.innerText='1-MIN LIVE DATA';
+    setCache('current',o);
     updateFcChart();
     updatePrecipChart();
   })
-  .catch(e=>console.warn('Load:',e));
+  .catch(e=>{console.warn('Load:',e);liveBadge.className='error';liveBadge.innerText='NETWORK ERROR';});
 }
 function fToC(f){return(f-32)*5/9;}
-function intoMm(inch){return inch*25.4;}
 
 load();
 let cd=60;
@@ -108,42 +129,43 @@ loadHistoricalData();
 function loadHistoricalData(){
   const dateISO=dp.value;
   if(!dateISO)return;
-  const d=new Date(dateISO);
-  if(isNaN(d))return;
-  const yyyy=d.getFullYear();
-  const mm=(d.getMonth()+1).toString().padStart(2,'0');
-  const dd=d.getDate().toString().padStart(2,'0');
-  const dateStr=yyyy+'-'+mm+'-'+dd;
-  fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+dateStr)
+  const cached=getCache('hist_'+dateISO);
+  if(cached){renderHistChart(cached);return;}
+  fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+dateISO)
   .then(r=>r.json())
   .then(d=>{
     if(!d||!d.data)return;
-    const temps=d.data.filter(r=>r.tmpf!=null).map(r=>{
-      const lv=r.local_valid||'';
-      const timePart=lv.replace('T',' ').split(' ')[1]||'';
-      const hh=parseInt(timePart.split(':')[0],10)||0;
-      const mm=parseInt(timePart.split(':')[1],10)||0;
-      return{label:pad(hh)+':'+pad(mm),temp:fToC(r.tmpf)};
-    });
-    const dews=d.data.filter(r=>r.dwpf!=null).map(r=>{
-      const lv=r.local_valid||'';
-      const timePart=lv.replace('T',' ').split(' ')[1]||'';
-      const hh=parseInt(timePart.split(':')[0],10)||0;
-      const mm=parseInt(timePart.split(':')[1],10)||0;
-      return{label:pad(hh)+':'+pad(mm),temp:fToC(r.dwpf)};
-    });
-    if(histChart){histChart.destroy();}
-    const ctx=document.getElementById('histChart').getContext('2d');
-    histChart=new Chart(ctx,{
-      type:'line',
-      data:{
-        labels:temps.map(t=>t.label),
-        datasets:[{label:'Temp (C)',data:temps.map(t=>t.temp),borderColor:'#3b82f6',fill:false,tension:0.1},{label:'Dew Point (C)',data:dews.map(t=>t.temp),borderColor:'#10b981',borderDash:[5,5],fill:false,tension:0.1}]
-      },
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#e2e8f0',font:{size:10}}}},scales:{x:{ticks:{color:'#94a3b8',font:{size:9}}},y:{ticks:{color:'#94a3b8',font:{size:9}}}}}
-    });
+    setCache('hist_'+dateISO,d.data);
+    renderHistChart(d.data);
   })
   .catch(e=>console.warn('History:',e));
+}
+
+function renderHistChart(data){
+  const temps=data.filter(r=>r.tmpf!=null).map(r=>{
+    const lv=r.local_valid||'';
+    const timePart=lv.replace('T',' ').split(' ')[1]||'';
+    const hh=parseInt(timePart.split(':')[0],10)||0;
+    const mm=parseInt(timePart.split(':')[1],10)||0;
+    return{label:pad(hh)+':'+pad(mm),temp:fToC(r.tmpf)};
+  });
+  const dews=data.filter(r=>r.dwpf!=null).map(r=>{
+    const lv=r.local_valid||'';
+    const timePart=lv.replace('T',' ').split(' ')[1]||'';
+    const hh=parseInt(timePart.split(':')[0],10)||0;
+    const mm=parseInt(timePart.split(':')[1],10)||0;
+    return{label:pad(hh)+':'+pad(mm),temp:fToC(r.dwpf)};
+  });
+  if(histChart){histChart.destroy();}
+  const ctx=document.getElementById('histChart').getContext('2d');
+  histChart=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:temps.map(t=>t.label),
+      datasets:[{label:'Temp (°C)',data:temps.map(t=>t.temp),borderColor:'#3b82f6',fill:false,tension:0.1},{label:'Dew Point (°C)',data:dews.map(t=>t.temp),borderColor:'#10b981',borderDash:[5,5],fill:false,tension:0.1}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,labels:{color:'#e2e8f0',font:{size:10}}},tooltip:{backgroundColor:'#1e293b',titleColor:'#e2e8f0',bodyColor:'#e2e8f0',borderColor:'#334155',borderWidth:1}},scales:{x:{ticks:{color:'#94a3b8',font:{size:9}}},y:{ticks:{color:'#94a3b8',font:{size:9}}}}}
+  });
 }
 function pad(n){return n.toString().padStart(2,'0');}
 
@@ -152,14 +174,15 @@ dateISOEl.value=today.toISOString().split('T')[0];
 dateISOEl.addEventListener('change',updateFcChart);
 
 function nowSGT(){return new Date(new Date().getTime()+8*3600*1000);}
+function setTimeRange(hours){timeRange=hours;document.querySelectorAll('.time-controls .rtbn').forEach(b=>b.classList.remove('active'));event.target.classList.add('active');updateFcChart();}
 
 function updateFcChart(){
   const dateISO=dateISOEl.value||(function(){var n=nowSGT();return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate())})();
   const now=nowSGT();
-  const windowStart=new Date(now.getTime()-12*3600*1000);
-  const windowEnd=new Date(now.getTime()+24*3600*1000);
+  const windowStart=new Date(now.getTime()-(timeRange/2)*3600*1000);
+  const windowEnd=new Date(now.getTime()+(timeRange/2)*3600*1000);
   Promise.all([
-    fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=temperature_2m&timezone=Asia/Singapore').then(r=>r.json()),
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=temperature_2m&timezone=Asia/Singapore&forecast_days=3').then(r=>r.json()),
     fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+dateISO).then(r=>r.json())
   ]).then(([fc,obs])=>{
     const fcTimes=fc.hourly.time||[];
@@ -179,14 +202,8 @@ function updateFcChart(){
     const asosLabels=asosFiltered.map(d=>d.label);
     const asosTemps=asosFiltered.map(d=>d.temp);
     const allLabels=fcLabels.length>asosLabels.length?fcLabels:asosLabels;
-    const fcDataAligned=allLabels.map((label,i)=>{
-      const fcIdx=fcLabels.indexOf(label);
-      return fcIdx>=0?fcData[fcIdx]:null;
-    });
-    const asosDataAligned=allLabels.map((label,i)=>{
-      const asosIdx=asosLabels.indexOf(label);
-      return asosIdx>=0?asosTemps[asosIdx]:null;
-    });
+    const fcDataAligned=allLabels.map((label)=>{const idx=fcLabels.indexOf(label);return idx>=0?fcData[idx]:null;});
+    const asosDataAligned=allLabels.map((label)=>{const idx=asosLabels.indexOf(label);return idx>=0?asosTemps[idx]:null;});
     if(tempChart){tempChart.destroy();}
     const ctx=document.getElementById('tempChart').getContext('2d');
     tempChart=new Chart(ctx,{
@@ -195,7 +212,7 @@ function updateFcChart(){
         labels:allLabels,
         datasets:[{label:'Forecast (GFS/Windy)',data:fcDataAligned,borderColor:'#f97316',borderDash:[5,5],fill:false,tension:0.1,spanGaps:true},{label:'Observed (NOAA ASOS)',data:asosDataAligned,borderColor:'#3b82f6',fill:false,tension:0.1,spanGaps:true}]
       },
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#e2e8f0',font:{size:10}}}},scales:{x:{ticks:{color:'#94a3b8',font:{size:9},maxRotation:45,minRotation:0}},y:{ticks:{color:'#94a3b8',font:{size:9}}}}}
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,labels:{color:'#e2e8f0',font:{size:10}}},tooltip:{backgroundColor:'#1e293b',titleColor:'#e2e8f0',bodyColor:'#e2e8f0',borderColor:'#334155',borderWidth:1}},scales:{x:{ticks:{color:'#94a3b8',font:{size:9},maxRotation:45,minRotation:0}},y:{ticks:{color:'#94a3b8',font:{size:9}}}}}
     });
   }).catch(e=>console.warn('FC:',e));
 }
@@ -203,33 +220,32 @@ updateFcChart();
 
 function updatePrecipChart(){
   const now=nowSGT();
+  const dateStr=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate());
   const windowStart=new Date(now.getTime()-12*3600*1000);
   const windowEnd=new Date(now.getTime()+24*3600*1000);
   Promise.all([
-    fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=precipitation&timezone=Asia/Singapore').then(r=>r.json()),
-    fetch('https://api.data.gov.sg/v1/environment/rainfall').then(r=>r.json())
-  ]).then(([fc,nea])=>{
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=precipitation&timezone=Asia/Singapore&forecast_days=3').then(r=>r.json()),
+    fetch('https://archive-api.open-meteo.com/v1/archive?latitude=1.35&longitude=103.99&start_date='+dateStr+'&end_date='+dateStr+'&hourly=precipitation&timezone=Asia/Singapore').then(r=>r.json())
+  ]).then(([fc,archive])=>{
     const fcTimes=fc.hourly.time||[];
     const fcPrecip=fc.hourly.precipitation||[];
     const fcFiltered=fcTimes.map((t,i)=>({time:new Date(t),precip:fcPrecip[i]})).filter(d=>d.time>=windowStart&&d.time<=windowEnd);
     const fcLabels=fcFiltered.map(d=>pad(d.time.getHours())+':'+pad(d.time.getMinutes()));
     const fcData=fcFiltered.map(d=>d.precip);
-    const neaStations=(nea.items&&nea.items[0]&&nea.items[0].readings)||[];
-    const changiStation=neaStations.find(s=>s.station_id==='S50')||neaStations.find(s=>s.station_id.startsWith('S5'))||neaStations[0];
-    const neaValue=changiStation?changiStation.value:0;
-    const neaTimestamp=nea.items&&nea.items[0]?new Date(nea.items[0].timestamp):now;
-    const neaData=[{label:pad(neaTimestamp.getHours())+':'+pad(neaTimestamp.getMinutes()),precip:neaValue,time:neaTimestamp}];
-    const neaLabels=neaData.map(d=>d.label);
-    const neaPrecip=neaData.map(d=>d.precip);
+    const archTimes=archive.hourly?.time||[];
+    const archPrecip=archive.hourly?.precipitation||[];
+    const archData=archTimes.map((t,i)=>({time:new Date(t),precip:archPrecip[i]})).filter(d=>d.time>=windowStart&&d.time<=windowEnd);
+    const archLabels=archData.map(d=>pad(d.time.getHours())+':'+pad(d.time.getMinutes()));
+    const archValues=archData.map(d=>d.precip);
     if(precipChart){precipChart.destroy();}
     const ctx=document.getElementById('precipChart').getContext('2d');
     precipChart=new Chart(ctx,{
       type:'line',
       data:{
-        labels:fcLabels,
-        datasets:[{label:'Forecast (GFS)',data:fcData,borderColor:'#f97316',borderDash:[5,5],fill:false,tension:0.1},{label:'Observed (NEA Changi)',data:neaPrecip,borderColor:'#3b82f6',fill:false,tension:0.1}]
+        labels:fcLabels.length>archLabels.length?fcLabels:archLabels,
+        datasets:[{label:'Forecast (GFS)',data:fcData,borderColor:'#f97316',borderDash:[5,5],fill:false,tension:0.1},{label:'Observed (Archive)',data:archValues,borderColor:'#3b82f6',fill:false,tension:0.1}]
       },
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#e2e8f0',font:{size:10}}}},scales:{x:{ticks:{color:'#94a3b8',font:{size:9},maxRotation:45,minRotation:0}},y:{title:{display:true,text:'mm',color:'#94a3b8'},ticks:{color:'#94a3b8',font:{size:9}}}}}
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,labels:{color:'#e2e8f0',font:{size:10}}},tooltip:{backgroundColor:'#1e293b',titleColor:'#e2e8f0',bodyColor:'#e2e8f0',borderColor:'#334155',borderWidth:1}},scales:{x:{ticks:{color:'#94a3b8',font:{size:9},maxRotation:45,minRotation:0}},y:{title:{display:true,text:'mm',color:'#94a3b8'},ticks:{color:'#94a3b8',font:{size:9}}}}}
     });
   }).catch(e=>console.warn('Precip:',e));
 }
