@@ -7,28 +7,17 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#0f172a;color:#e2e8f0;font-family:'Segoe UI',sans-serif;min-height:100vh;padding:16px;max-width:520px;margin:0 auto}
+body{background:#0f172a;color:#e2e8f0;font-family:'Segoe UI',sans-serif;min-height:100vh;padding:16px}
 .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .clock{font-size:13px;color:#64748b;font-variant-numeric:tabular-nums}
 .badge{background:#1e3a5f;color:#93c5fd;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600}
 .card{background:#1e293b;border-radius:16px;padding:18px;margin-bottom:14px;border:1px solid #334155}
-.sn{font-size:11px;color:#64748b;letter-spacing:1px;text-transform:uppercase;margin-bottom:2px}
-.sf{font-size:18px;font-weight:700;color:#e2e8f0;margin-bottom:4px}
-.live{display:inline-block;background:#064e3b;color:#34d399;font-size:11px;padding:2px 8px;border-radius:10px;margin-bottom:12px}
-.tmp{font-size:52px;font-weight:800;color:#4fc3f7;line-height:1;margin-bottom:6px}
-.unit{font-size:28px;color:#94a3b8;font-weight:400}
-.dp{font-size:13px;color:#94a3b8;margin-bottom:18px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0}
-.stat{background:#0f172a;border-radius:10px;padding:12px 14px}
-.sl{font-size:10px;color:#64748b;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
-.sv{font-size:20px;font-weight:700;color:#e2e8f0}
-.raw-box{background:#0f172a;border-radius:10px;padding:12px;margin-top:12px}
-.raw{font-size:11px;color:#94a3b8;font-family:monospace;word-break:break-all;margin-top:4px}
-.footer{display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:12px;color:#475569}
-.rbtn{background:#1e3a5f;color:#93c5fd;border:none;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px}
-.rbtn:hover{background:#1d4ed8}
-.sec-title{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#64748b;margin-bottom:10px}
-.date-picker{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;margin-left:8px}
+.sec-title{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#64748b;margin-bottom:12px}
+.live{display:inline-block;background:#0b4e3b;color:#34d399;font-size:11px;padding:2px 8px;border-radius:8px}
+.rtbn{background:#1e3a5f;color:#93c5fd;border:none;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px}
+.rtbn:hover{background:#1d4ed8}
+.raw-box{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:6px;margin-top:8px;font-size:11px;max-height:120px;overflow:auto}
+.date-picker{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:6px}
 .date-picker::-webkit-calendar-picker-indicator{filter:invert(1)}
 </style>
 </head>
@@ -38,269 +27,207 @@ body{background:#0f172a;color:#e2e8f0;font-family:'Segoe UI',sans-serif;min-heig
   <span class="badge" id="fc">ASOS</span>
 </div>
 <div class="card">
-  <div class="sn">NOAA ASOS &bull; WSSS</div>
-  <div class="sf">Singapore Changi</div>
-  <span class="live">1-min live data</span>
-  <div class="tmp"><span id="temp">--</span>&nbsp;<span class="unit">&deg;C</span></div>
-  <div class="dp">Dew point: <span id="dp">--</span></div>
-  <div class="grid">
-    <div class="stat"><div class="sl">Wind</div><div class="sv" id="wind">--</div></div>
-    <div class="stat"><div class="sl">Pressure</div><div class="sv" id="pres">--</div></div>
-    <div class="stat"><div class="sl">Visibility</div><div class="sv" id="vis">--</div></div>
-    <div class="stat"><div class="sl">Max Today</div><div class="sv" id="tmax">-- &deg;C</div></div>
+  <div class="sec-title">TEMPERATURE <span class="live">1-min live data</span></div>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+    <span style="font-size:48px;font-weight:600" id="tmp">--</span><span class="unit">&deg;C</span>
+    <span style="font-size:24px;color:#64748b">Dew: <span id="dew">--</span>&deg;C</span>
   </div>
-  <div class="stat" style="margin-bottom:0"><div class="sl">Humidity</div><div class="sv"><span id="hum">--</span>%</div></div>
-  <div class="raw-box"><div class="sl">Raw ASOS Observation</div><div class="raw" id="raw">Loading...</div></div>
-  <div class="footer">
-    <span>Last observed: <span id="lobs">--</span></span>
-    <button class="rbtn" onclick="load()">&#x21bb; Refresh</button>
-  </div>
+  <button class="rtbn" onclick="load()">&#x21bb; Refresh</button>
+</div>
+<div class="card">
+  <div class="sec-title"><div class="s">Raw ASOS Observation</div><div class="raw" id="raw">Loading...</div></div>
+  <span>Last observed: <span id="lobs">--</span></span>
+  <button class="rtbn" onclick="load()">&#x21bb; Refresh</button>
 </div>
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
   <svg width="36" height="36" viewBox="0 0 36 36">
     <circle cx="18" cy="18" r="16" fill="none" stroke="#1e293b" stroke-width="3"/>
-    <circle id="ring" cx="18" cy="18" r="16" fill="none" stroke="#4fc3f7" stroke-width="3"
-      stroke-dasharray="100.53" stroke-dashoffset="0" stroke-linecap="round"
-      transform="rotate(-90 18 18)"/>
+    <circle id="ring" cx="18" cy="18" r="16" fill="none" stroke="#4fc3f7" stroke-width="3" stroke-dasharray="100,53" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 18 18)"/>
   </svg>
   <span style="font-size:12px;color:#64748b" id="nxt">Next refresh in 60s</span>
 </div>
 <div class="card">
   <div class="sec-title">Temperature History &bull; WSSS (NOAA ASOS)</div>
-  <div style="position:relative;height:180px;"><canvas id="tempChart"></canvas></div>
+  <input type="date" id="datePicker" class="date-picker" onchange="loadHistoricalData()" />
+  <div class="raw-box"><canvas id="histChart" width="360" height="180"></canvas></div>
 </div>
 <div class="card">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-    <div class="sec-title" style="margin-bottom:0">Forecast vs Observed &bull; WSSS</div>
-    <div style="display:flex;align-items:center;gap:8px;">
-      <input type="date" class="date-picker" id="histDate" onchange="loadHistoricalData(this.value)" />
-      <span class="badge" id="fcbadge" style="font-size:11px;">-- vs Forecast</span>
-    </div>
-  </div>
-  <div style="font-size:11px;color:#64748b;margin-bottom:10px;">Open-Meteo GFS vs NOAA ASOS</div>
-  <div style="position:relative;height:220px;"><canvas id="compareChart"></canvas></div>
-  <div style="margin-top:16px;">
-    <div class="sec-title">Precipitation Forecast vs Observed</div>
-    <div style="position:relative;height:180px;"><canvas id="precipChart"></canvas></div>
-  </div>
+  <div class="sec-title">FORECAST VS OBSERVED &bull; WSSS</div>
+  <div style="font-size:11px;color:#93c5fd;margin-bottom:4px">Open-Meteo GFS (same model as Windy) vs NOAA ASOS 1-min</div>
+  <input type="date" id="dateISO" class="date-picker" />
+  <div class="raw-box"><canvas id="tempChart" width="360" height="180"></canvas></div>
+</div>
+<div class="card">
+  <div class="sec-title">PRECIPITATION (FORECAST VS OBSERVED) &bull; WSSS</div>
+  <div style="font-size:11px;color:#93c5fd;margin-bottom:4px">Open-Meteo GFS vs Singapore NEA Real-time Rainfall</div>
+  <div class="raw-box"><canvas id="precipChart" width="360" height="180"></canvas></div>
 </div>
 <script>
-var histChart=null,fcChart=null,precipChart=null;
-var obsHistory=[],fcData=null,asosHistory=[],cd=60;
-function fToC(f){return Math.round((f-32)*50/9)/10;}
-function inToMm(i){return Math.round(i*254)/10;}
-function inToHpa(i){return Math.round(i*338639)/10000;}
-function miToKm(m){return Math.round(m*16093)/10000;}
-function pad(n){return n<10?'0'+n:''+n;}
-function nowSGT(){return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Singapore'}));}
-function setText(id,val){var el=document.getElementById(id);if(el)el.textContent=val;}
+let histChart,tempChart,precipChart;
+function updateClock(){const d=new Date();const h=d.getHours().toString().padStart(2,'0'),m=d.getMinutes().toString().padStart(2,'0'),s=d.getSeconds().toString().padStart(2,'0');document.getElementById('clk').innerText=h+':'+m+':'+s+' SGT';}
+updateClock();setInterval(updateClock,1000);
+
 function load(){
-  var cb='_asos'+Date.now();
-  window[cb]=function(d){
-    try{
-      var obs=d.last_ob;
-      if(!obs)throw new Error('no data');
-      var tempC=obs['airtemp[F]']!=null?fToC(obs['airtemp[F]']):null;
-      var dewC=obs['dewpointtemp[F]']!=null?fToC(obs['dewpointtemp[F]']):null;
-      var wsKph=obs['windspeed[kt]']!=null?Math.round(obs['windspeed[kt]']*1852)/1000:null;
-      var pres=obs['altimeter[in]']!=null?inToHpa(obs['altimeter[in]']):null;
-      var vis=obs['visibility[mile]']!=null?miToKm(obs['visibility[mile]']):null;
-      setText('raw',obs['raw']||'OK');
-      if(tempC!==null){
-        setText('temp',tempC+'\u00b0C');
-        setText('dp',(dewC!==null?dewC:'--')+'\u00b0C');
-        setText('wind',(wsKph!==null?wsKph:'--')+' km/h');
-        setText('pres',(pres!==null?pres:'--')+' hPa');
-        setText('vis',(vis!==null?vis:'--')+' km');
-        var rh=dewC!==null?Math.round(100*Math.exp(17.625*dewC/(243.04+dewC))/Math.exp(17.625*tempC/(243.04+tempC))):null;
-        setText('hum',(rh!==null?rh:'--')+'%');
-        var stored=parseFloat(localStorage.getItem('wsss_tmax')||'-99');
-        var sDate=localStorage.getItem('wsss_tmax_date')||'';
-        var today=nowSGT().toDateString();
-        var mx=sDate===today?Math.max(stored,tempC):tempC;
-        localStorage.setItem('wsss_tmax',mx);
-        localStorage.setItem('wsss_tmax_date',today);
-        setText('tmax',mx+'\u00b0C');
-        var sgt=nowSGT();
-        var lbl=pad(sgt.getHours())+':'+pad(sgt.getMinutes());
-        setText('lobs',lbl);
-        obsHistory.push({label:lbl,temp:tempC,dew:dewC});
-        if(obsHistory.length>90)obsHistory.shift();
-        updateHistChart();
-        updateFcChart();
-      }
-    }catch(e){setText('raw','Err:'+e.message);}
-    delete window[cb];
-    var el=document.getElementById('_jsp');if(el)el.remove();
-  };
-  var el=document.createElement('script');
-  el.id='_jsp';
-  el.src='https://mesonet.agron.iastate.edu/json/current.py?station=WSSS&network=SG__ASOS&callback='+cb;
-  el.onerror=function(){setText('raw','Network error');delete window[cb];};
-  document.head.appendChild(el);
+  fetch('https://mesonet.agron.iastate.edu/json/current.py?station=WSSS&network=SG__ASOS&callback=')
+  .then(r=>r.json())
+  .then(d=>{
+    if(!d||!d.data)return;
+    const o=d.data[0];
+    if(!o)return;
+    const tmpC=o.tmpf!=null?fToC(o.tmpf):null;
+    const dewC=o.dwpf!=null?fToC(o.dwpf):null;
+    document.getElementById('tmp').innerText=tmpC!=null?tmpC.toFixed(1):'--';
+    document.getElementById('dew').innerText=dewC!=null?dewC.toFixed(1):'--';
+    document.getElementById('lobs').innerText=o.local_valid||'--';
+    document.getElementById('raw').innerText=JSON.stringify(o,null,2);
+    updateFcChart();
+    updatePrecipChart();
+  })
+  .catch(e=>console.warn('Load:',e));
 }
-function updateHistChart(){
-  var labels=obsHistory.map(function(o){return o.label;});
-  var temps=obsHistory.map(function(o){return o.temp;});
-  var dews=obsHistory.map(function(o){return o.dew;});
-  var cv=document.getElementById('tempChart');
-  if(!cv)return;
-  if(!histChart){
-    histChart=new Chart(cv.getContext('2d'),{
-      type:'line',
-      data:{labels:labels,datasets:[
-        {label:'Temp (C)',data:temps,borderColor:'#4fc3f7',backgroundColor:'transparent',pointRadius:3,tension:0.3},
-        {label:'Dew Point (C)',data:dews,borderColor:'#b39ddb',backgroundColor:'transparent',borderDash:[5,3],pointRadius:2,tension:0.3}
-      ]},
-      options:{responsive:true,maintainAspectRatio:false,
-        scales:{x:{ticks:{color:'#94a3b8',maxTicksLimit:8},grid:{color:'#1e293b'}},y:{ticks:{color:'#94a3b8',callback:function(v){return v+'C';}},grid:{color:'#1e293b'}}},
-        plugins:{legend:{labels:{color:'#cbd5e1'}}}}
-    });
-  }else{
-    histChart.data.labels=labels;
-    histChart.data.datasets[0].data=temps;
-    histChart.data.datasets[1].data=dews;
-    histChart.update('none');
-  }
-}
-function loadAsosHistory(dateISO){
-  dateISO=dateISO||(function(){var n=nowSGT();return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate());})();
-  fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+dateISO)
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(!d||!d.data)return;
-      asosHistory=d.data.filter(function(r){return r.tmpf!=null;}).map(function(r){
-        var lv=r.local_valid||'';
-        var timePart=lv.replace('T',' ').split(' ')[1]||'';
-        var hh=parseInt(timePart.split(':')[0],10)||0;
-        var mm=parseInt(timePart.split(':')[1],10)||0;
-        var precipMm=r.p01i!=null?inToMm(r.p01i):null;
-        return{label:pad(hh)+':'+pad(mm),temp:fToC(r.tmpf),dew:r.dwpf!=null?fToC(r.dwpf):null,precip:precipMm,hour:hh};
-      });
-      updateFcChart();
-    }).catch(function(e){console.warn('History:',e);});
-}
-function loadForecast(dateISO){
-  dateISO=dateISO||(function(){var n=nowSGT();return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate());})();
-  var isToday=(dateISO===nowSGT().toISOString().split('T')[0]);
-  var apiUrl=isToday
-    ?'https://api.open-meteo.com/v1/forecast?latitude=1.3644&longitude=103.9915&hourly=temperature_2m,precipitation&timezone=Asia%2FSingapore&forecast_days=1'
-    :'https://archive-api.open-meteo.com/v1/archive?latitude=1.3644&longitude=103.9915&start_date='+dateISO+'&end_date='+dateISO+'&hourly=temperature_2m,precipitation&timezone=Asia%2FSingapore';
-  fetch(apiUrl)
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(!d||!d.hourly||!d.hourly.time)return;
-      fcData=d.hourly.time.map(function(t,i){
-        var timePart=t.split('T')[1]||'00:00';
-        var hh=parseInt(timePart.split(':')[0],10);
-        var mm=parseInt(timePart.split(':')[1],10);
-        return{label:pad(hh)+':'+pad(mm),temp:d.hourly.temperature_2m[i],precip:d.hourly.precipitation[i],hour:hh};
-      });
-      updateFcChart();
-    }).catch(function(e){console.warn('Forecast:',e);});
-}
-function updateFcChart(){
-  var obsData=asosHistory.length>5?asosHistory:obsHistory;
-  if(!fcData||obsData.length===0)return;
-  var om={},pm={};
-  obsData.forEach(function(o){
-    var hh=pad(o.hour!==undefined?o.hour:parseInt(o.label.split(':')[0],10))+':00';
-    if(!om[hh])om[hh]=[];
-    om[hh].push(o.temp);
-    if(o.precip!==null&&o.precip!==undefined){
-      if(!pm[hh])pm[hh]=[];
-      pm[hh].push(o.precip);
-    }
-  });
-  var fcL=fcData.map(function(f){return f.label;});
-  var fcT=fcData.map(function(f){return f.temp;});
-  var fcP=fcData.map(function(f){return f.precip;});
-  var obT=fcL.map(function(l){
-    var a=om[l];if(!a||!a.length)return null;
-    return Math.round(a.reduce(function(x,y){return x+y;},0)/a.length*10)/10;
-  });
-  var obP=fcL.map(function(l){
-    var a=pm[l];if(!a||!a.length)return null;
-    return Math.round(a.reduce(function(x,y){return x+y;},0)/a.length*10)/10;
-  });
-  var df=fcL.map(function(l,i){return obT[i]===null?null:Math.round((obT[i]-fcT[i])*10)/10;});
-  var ld=null;for(var i=df.length-1;i>=0;i--){if(df[i]!==null){ld=df[i];break;}}
-  var bg=document.getElementById('fcbadge');
-  if(bg&&ld!==null){
-    var s=ld>=0?'+':'';
-    bg.textContent=s+ld.toFixed(1)+'C vs Forecast';
-    bg.style.background=Math.abs(ld)<1?'#1e3a5f':Math.abs(ld)<2?'#7c3aed':'#dc2626';
-  }
-  var bc=df.map(function(v){return v===null?'transparent':v>=0?'rgba(74,222,128,0.5)':'rgba(248,113,113,0.5)';});
-  var cv=document.getElementById('compareChart');
-  if(!cv)return;
-  if(!fcChart){
-    fcChart=new Chart(cv.getContext('2d'),{
-      data:{labels:fcL,datasets:[
-        {type:'line',label:'Observed (NOAA ASOS)',data:obT,borderColor:'#4fc3f7',backgroundColor:'transparent',borderWidth:2,pointRadius:3,tension:0.3,yAxisID:'y',spanGaps:false},
-        {type:'line',label:'Forecast (GFS / Windy)',data:fcT,borderColor:'#fb923c',backgroundColor:'transparent',borderWidth:2,borderDash:[5,3],pointRadius:3,tension:0.4,yAxisID:'y'},
-        {type:'bar',label:'Difference (Obs - Fc)',data:df,backgroundColor:bc,yAxisID:'y2'}
-      ]},
-      options:{responsive:true,maintainAspectRatio:false,
-        scales:{
-          x:{ticks:{color:'#94a3b8',maxTicksLimit:12},grid:{color:'#1e293b'}},
-          y:{position:'left',ticks:{color:'#94a3b8',callback:function(v){return v+'C';}},grid:{color:'#1e293b'},title:{display:true,text:'Temperature (C)',color:'#64748b'}},
-          y2:{position:'right',ticks:{color:'#94a3b8',callback:function(v){return v+'C';}},grid:{drawOnChartArea:false},title:{display:true,text:'Difference',color:'#64748b'},min:-5,max:5}
-        },
-        plugins:{legend:{labels:{color:'#cbd5e1'}},tooltip:{mode:'index',intersect:false}}}
-    });
-  }else{
-    fcChart.data.labels=fcL;
-    fcChart.data.datasets[0].data=obT;
-    fcChart.data.datasets[1].data=fcT;
-    fcChart.data.datasets[2].data=df;
-    fcChart.data.datasets[2].backgroundColor=bc;
-    fcChart.update();
-  }
-  var pcv=document.getElementById('precipChart');
-  if(!pcv)return;
-  if(!precipChart){
-    precipChart=new Chart(pcv.getContext('2d'),{
-      data:{labels:fcL,datasets:[
-        {type:'bar',label:'Observed (NOAA ASOS)',data:obP,backgroundColor:'rgba(99,179,237,0.6)',borderColor:'#4fc3f7',borderWidth:1},
-        {type:'bar',label:'Forecast (GFS)',data:fcP,backgroundColor:'rgba(251,146,60,0.6)',borderColor:'#fb923c',borderWidth:1}
-      ]},
-      options:{responsive:true,maintainAspectRatio:false,
-        scales:{
-          x:{ticks:{color:'#94a3b8',maxTicksLimit:12},grid:{color:'#1e293b'}},
-          y:{ticks:{color:'#94a3b8',callback:function(v){return v+' mm';}},grid:{color:'#1e293b'},title:{display:true,text:'Precipitation (mm)',color:'#64748b'}}
-        },
-        plugins:{legend:{labels:{color:'#cbd5e1'}},tooltip:{mode:'index',intersect:false}}}
-    });
-  }else{
-    precipChart.data.labels=fcL;
-    precipChart.data.datasets[0].data=obP;
-    precipChart.data.datasets[1].data=fcP;
-    precipChart.update();
-  }
-}
-function loadHistoricalData(dateStr){
-  if(!dateStr)return;
-  loadAsosHistory(dateStr);
-  loadForecast(dateStr);
-}
-setInterval(function(){
-  var s=nowSGT();
-  var cl=document.getElementById('clk');
-  if(cl)cl.textContent=s.toLocaleTimeString('en-SG',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' SGT';
-},1000);
-setInterval(function(){
-  cd--;if(cd<=0){load();cd=60;}
-  var ring=document.getElementById('ring');
-  if(ring)ring.style.strokeDashoffset=50.27*(1-cd/60);
-  var nxt=document.getElementById('nxt');
-  if(nxt)nxt.textContent='Next refresh in '+cd+'s';
-},1000);
-loadForecast();
-setInterval(loadForecast,1800000);
-loadAsosHistory();
-setInterval(loadAsosHistory,300000);
+function fToC(f){return(f-32)*5/9;}
+function intoMm(inch){return inch*25.4;}
+
 load();
+let cd=60;
+setInterval(()=>{
+  cd--;
+  if(cd<=0){load();cd=60;}
+  document.getElementById('nxt').innerText='Next refresh in '+cd+'s';
+  const pct=((60-cd)/60)*100;
+  document.getElementById('ring').style.strokeDasharray=pct+','+((100-pct)+53);
+},1000);
+
+const dp=document.getElementById('datePicker');
+const today=new Date();
+dp.value=today.toISOString().split('T')[0];
+dp.addEventListener('change',loadHistoricalData);
+loadHistoricalData();
+
+function loadHistoricalData(){
+  const dateISO=dp.value;
+  if(!dateISO)return;
+  const d=new Date(dateISO);
+  if(isNaN(d))return;
+  const yyyy=d.getFullYear();
+  const mm=(d.getMonth()+1).toString().padStart(2,'0');
+  const dd=d.getDate().toString().padStart(2,'0');
+  const dateStr=yyyy+'-'+mm+'-'+dd;
+  fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+dateStr)
+  .then(r=>r.json())
+  .then(d=>{
+    if(!d||!d.data)return;
+    const temps=d.data.filter(r=>r.tmpf!=null).map(r=>{
+      const lv=r.local_valid||'';
+      const timePart=lv.replace('T',' ').split(' ')[1]||'';
+      const hh=parseInt(timePart.split(':')[0],10)||0;
+      const mm=parseInt(timePart.split(':')[1],10)||0;
+      return{label:pad(hh)+':'+pad(mm),temp:fToC(r.tmpf)};
+    });
+    const dews=d.data.filter(r=>r.dwpf!=null).map(r=>{
+      const lv=r.local_valid||'';
+      const timePart=lv.replace('T',' ').split(' ')[1]||'';
+      const hh=parseInt(timePart.split(':')[0],10)||0;
+      const mm=parseInt(timePart.split(':')[1],10)||0;
+      return{label:pad(hh)+':'+pad(mm),temp:fToC(r.dwpf)};
+    });
+    if(histChart){histChart.destroy();}
+    const ctx=document.getElementById('histChart').getContext('2d');
+    histChart=new Chart(ctx,{
+      type:'line',
+      data:{
+        labels:temps.map(t=>t.label),
+        datasets:[{label:'Temp (C)',data:temps.map(t=>t.temp),borderColor:'#3b82f6',fill:false,tension:0.1},{label:'Dew Point (C)',data:dews.map(t=>t.temp),borderColor:'#10b981',borderDash:[5,5],fill:false,tension:0.1}]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#e2e8f0',font:{size:10}}}},scales:{x:{ticks:{color:'#94a3b8',font:{size:9}}},y:{ticks:{color:'#94a3b8',font:{size:9}}}}}
+    });
+  })
+  .catch(e=>console.warn('History:',e));
+}
+function pad(n){return n.toString().padStart(2,'0');}
+
+const dateISOEl=document.getElementById('dateISO');
+const isToday=(dateISO===nowSGT().toISOString().split('T')[0]);
+dateISOEl.value=today.toISOString().split('T')[0];
+dateISOEl.addEventListener('change',updateFcChart);
+
+function nowSGT(){return new Date(new Date().getTime()+8*3600*1000);}
+
+function updateFcChart(){
+  const dateISO=dateISOEl.value||(function(){var n=nowSGT();return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate())})();
+  const isToday=(dateISO===nowSGT().toISOString().split('T')[0]);
+  Promise.all([
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=temperature_2m&timezone=Asia/Singapore').then(r=>r.json()),
+    fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+dateISO).then(r=>r.json())
+  ]).then(([fc,obs])=>{
+    const fcTimes=fc.hourly.time||[];
+    const fcTemps=fc.hourly.temperature_2m||[];
+    const asosHistory=obs.data||[];
+    const asosData=asosHistory.filter(r=>r.tmpf!=null).map(r=>{
+      const lv=r.local_valid||'';
+      const timePart=lv.replace('T',' ').split(' ')[1]||'';
+      const hh=parseInt(timePart.split(':')[0],10)||0;
+      const mm=parseInt(timePart.split(':')[1],10)||0;
+      return{label:pad(hh)+':'+pad(mm),temp:fToC(r.tmpf)};
+    });
+    const now=nowSGT();
+    const windowStart=new Date(now.getTime()-12*3600*1000);
+    const windowEnd=new Date(now.getTime()+12*3600*1000);
+    const fcFiltered=fcTimes.map((t,i)=>({time:new Date(t),temp:fcTemps[i]})).filter(d=>d.time>=windowStart&&d.time<=windowEnd);
+    const fcLabels=fcFiltered.map(d=>pad(d.time.getHours())+':'+pad(d.time.getMinutes()));
+    const fcData=fcFiltered.map(d=>d.temp);
+    const asosLabels=asosData.map(d=>d.label);
+    const asosTemps=asosData.map(d=>d.temp);
+    if(tempChart){tempChart.destroy();}
+    const ctx=document.getElementById('tempChart').getContext('2d');
+    tempChart=new Chart(ctx,{
+      type:'line',
+      data:{
+        labels:fcLabels.length>asosLabels.length?fcLabels:asosLabels,
+        datasets:[{label:'Forecast (GFS/Windy)',data:fcData,borderColor:'#f97316',borderDash:[5,5],fill:false,tension:0.1},{label:'Observed (NOAA ASOS)',data:asosTemps,borderColor:'#3b82f6',fill:false,tension:0.1}]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#e2e8f0',font:{size:10}}}},scales:{x:{ticks:{color:'#94a3b8',font:{size:9}}},y:{ticks:{color:'#94a3b8',font:{size:9}}}}}
+    });
+  }).catch(e=>console.warn('FC:',e));
+}
+updateFcChart();
+
+function updatePrecipChart(){
+  const dateISO=dateISOEl.value||(function(){var n=nowSGT();return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate())})();
+  Promise.all([
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=precipitation&timezone=Asia/Singapore').then(r=>r.json()),
+    fetch('https://api.data.gov.sg/v2/real-time/api/rainfall').then(r=>r.json())
+  ]).then(([fc,nea])=>{
+    const fcTimes=fc.hourly.time||[];
+    const fcPrecip=fc.hourly.precipitation||[];
+    const now=nowSGT();
+    const windowStart=new Date(now.getTime()-12*3600*1000);
+    const windowEnd=new Date(now.getTime()+12*3600*1000);
+    const fcFiltered=fcTimes.map((t,i)=>({time:new Date(t),precip:fcPrecip[i]})).filter(d=>d.time>=windowStart&&d.time<=windowEnd);
+    const fcLabels=fcFiltered.map(d=>pad(d.time.getHours())+':'+pad(d.time.getMinutes()));
+    const fcData=fcFiltered.map(d=>d.precip);
+    const neaStations=nea.data?.stations||[];
+    const changiStation=neaStations.find(s=>s.name==='Changi')||neaStations[0];
+    const neaReadings=changiStation?.readings||[];
+    const neaData=neaReadings.map(r=>{
+      const t=new Date(r.timestamp);
+      return{label:pad(t.getHours())+':'+pad(t.getMinutes()),precip:r.value};
+    });
+    const neaLabels=neaData.map(d=>d.label);
+    const neaPrecip=neaData.map(d=>d.precip);
+    if(precipChart){precipChart.destroy();}
+    const ctx=document.getElementById('precipChart').getContext('2d');
+    precipChart=new Chart(ctx,{
+      type:'line',
+      data:{
+        labels:fcLabels.length>neaLabels.length?fcLabels:neaLabels,
+        datasets:[{label:'Forecast (GFS)',data:fcData,borderColor:'#f97316',borderDash:[5,5],fill:false,tension:0.1},{label:'Observed (NEA Rainfall)',data:neaPrecip,borderColor:'#3b82f6',fill:false,tension:0.1}]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#e2e8f0',font:{size:10}}}},scales:{x:{ticks:{color:'#94a3b8',font:{size:9}}},y:{title:{display:true,text:'mm',color:'#94a3b8'},ticks:{color:'#94a3b8',font:{size:9}}}}}
+    });
+  }).catch(e=>console.warn('Precip:',e));
+}
+updatePrecipChart();
 </script>
 </body>
 </html>
