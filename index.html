@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>WSSS Smart Analytics</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/date-fns@2.30.0/dist/date-fns.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/date-fns@3.0.0/cdn.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -121,8 +121,7 @@ function updateUnifiedChart(){
         responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
         plugins:{legend:{position:'top',align:'end',labels:{color:COLORS.gray,font:{family:'Inter',weight:600,size:10},usePointStyle:true,boxWidth:8}},tooltip:{backgroundColor:'#1a1a1a',titleColor:COLORS.gold,bodyColor:'#fff',borderColor:'#444',borderWidth:1,padding:12}},
         scales:{
-          x:{type:'time',time:{unit:'hour',displayFormats:{hour:'HH:mm
-MMM d'}},grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:COLORS.gray,font:{size:10},autoSkip:true,maxTicksLimit:12}},
+          x:{type:'time',time:{unit:'hour',displayFormats:{hour:'HH:mm MMM d'}},grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:COLORS.gray,font:{size:10},autoSkip:true,maxTicksLimit:12}},
           y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:COLORS.gray,font:{size:10}},title:{display:true,text:'TEMPERATURE (°C)',color:COLORS.gray,font:{size:9,weight:700,letterSpacing:1}}}
         }
       }
@@ -133,7 +132,8 @@ MMM d'}},grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:COLORS.gray,font:{si
     if(common.length>0){
       const err=Math.sqrt(common.reduce((s,o)=>{const g=fcd.find(x=>x.t.getTime()===o.t.getTime());return s+Math.pow(o.v-g.v,2);},0)/common.length);
       document.getElementById('rmseVal').innerText=err.toFixed(2)+'°C';
-      document.getElementById('biasVal').innerText=(obd[obd.length-1].v-fcd.find(x=>x.t>obd[obd.length-1].t)?.v||0).toFixed(1)+'°C';
+      const lastO=obd[obd.length-1],matchingGfs=fcd.find(g=>g.t.getTime()===lastO.t.getTime());
+      document.getElementById('biasVal').innerText=(matchingGfs?(lastO.v-matchingGfs.v).toFixed(1):'--')+'°C';
     }
   });
 }
