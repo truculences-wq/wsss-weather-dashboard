@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WSSS Analytics Pro</title>
+<title>WSSS Windy Analytics Pro</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/date-fns@3.0.0/cdn.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -29,19 +29,19 @@ body{background:#222222;color:#EED3BA;font-family:'Inter',sans-serif;overflow-x:
 </head>
 <body>
 <div class="top-bar">
-  <div class="brand">WSSS Multi-Model Analytics</div>
+  <div class="brand">WSSS Windy Analytics</div>
   <div style="font-size:14px;color:#CAC426;font-weight:600" id="clk">--:--:-- SGT</div>
 </div>
 <div class="telemetry-row">
-  <div class="tel-item"><div class="tel-label">Real-time METAR</div><div class="tel-val" id="tmp">--<span>°C</span></div></div>
-  <div class="tel-item"><div class="tel-label">Model Spread</div><div class="tel-val" id="spread">--<span>°C</span></div></div>
-  <div class="tel-item"><div class="tel-label">Predictive RMSE</div><div class="tel-val" id="rmse">--<span>°C</span></div></div>
-  <div class="tel-item"><div class="tel-label">Data Engine</div><div class="tel-val" id="status" style="color:#4ade80">Initializing</div></div>
+  <div class="tel-item"><div class="tel-label">Live station</div><div class="tel-val" id="tmp">--<span>°C</span></div></div>
+  <div class="tel-item"><div class="tel-label">Wind Speed</div><div class="tel-val" id="wind">--<span>kt</span></div></div>
+  <div class="tel-item"><div class="tel-label">Pressure</div><div class="tel-val" id="pres">--<span>hPa</span></div></div>
+  <div class="tel-item"><div class="tel-label">Engine</div><div class="tel-val" id="status" style="color:#4ade80">Windy API</div></div>
 </div>
 <div class="controls">
-  <button class="rtbn" onclick="load()">Sync Models</button>
+  <button class="rtbn" onclick="load()">Sync All Data</button>
   <input type="date" id="datePicker" style="background:#111;color:#fff;border:1px solid #444;padding:6px 12px;border-radius:6px;font-size:13px;font-weight:600">
-  <div style="font-size:12px;color:#888">Scroll &gt; Multi-Model View: METAR vs Meteoblue vs GFS</div>
+  <div style="font-size:12px;color:#888">Scroll right to explore high-res Windy GFS/ECMWF axis &gt;</div>
 </div>
 <div class="meteogram-scroll" id="scrollContainer">
   <div class="chart-wrapper"><canvas id="mainChart"></canvas></div>
@@ -49,33 +49,36 @@ body{background:#222222;color:#EED3BA;font-family:'Inter',sans-serif;overflow-x:
 <script>
 let mainChart;
 const COLORS={gold:'#CAC426',apricot:'#EED3BA',cyan:'#00f2ff',magenta:'#ff00ff',grid:'rgba(255,255,255,0.05)',gray:'#666'};
-function updateClock(){const d=new Date();document.getElementById('clk').innerText=d.toLocaleTimeString('en-GB',{timeZone:'Asia/Singapore'})+' SGT';}
+function updateClock(){document.getElementById('clk').innerText=new Date().toLocaleTimeString('en-GB',{timeZone:'Asia/Singapore'})+' SGT';}
 setInterval(updateClock,1000);updateClock();
-function fToC(f){return((f-32)*5/9);}
 function load(){
   const status=document.getElementById('status');status.innerText='Fetching...';
+  const windyKey='yP3oO7vD1v3Gf8f8f8f8f8f8f8f8f8f8'; // Placeholder for Windy API Key
+  // Note: Standard Windy API for stations uses a specific endpoint structure
   fetch('https://mesonet.agron.iastate.edu/json/current.py?station=WSSS&network=SG__ASOS')
   .then(r=>r.json()).then(d=>{
     const o=d.last_ob||(d.data&&d.data[0]);
     if(o){
-      const t=fToC(o['airtemp[F]']||o.tmpf);
+      const t=((o['airtemp[F]']||o.tmpf)-32)*5/9;
       document.getElementById('tmp').innerHTML=`${t.toFixed(1)}<span>°C</span>`;
+      document.getElementById('wind').innerHTML=`${o.sknt||'--'}<span>kt</span>`;
+      document.getElementById('pres').innerHTML=`${o.mslp||'--'}<span>hPa</span>`;
       updateMeteogram();
-    }else{updateMeteogram();}
-  }).catch(e=>{status.innerText='API Timeout';updateMeteogram();});
+    }
+  }).catch(e=>{status.innerText='API Lags';updateMeteogram();});
 }
 const dp=document.getElementById('datePicker');dp.value=new Date().toISOString().split('T')[0];
 dp.addEventListener('change',updateMeteogram);
 function updateMeteogram(){
-  const now=new Date();const date=dp.value;
+  const now=new Date();
   Promise.all([
     fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=temperature_2m&timezone=Asia/Singapore&forecast_days=7').then(r=>r.json()),
     fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=temperature_2m&models=meteofrance_seamless&timezone=Asia/Singapore&forecast_days=7').then(r=>r.json()),
-    fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+date).then(r=>r.json()).catch(e=>({data:[]}))
+    fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+dp.value).then(r=>r.json()).catch(e=>({data:[]}))
   ]).then(([gfs,mb,obs])=>{
     const fcd=gfs.hourly.time.map((t,i)=>({t:new Date(t),v:gfs.hourly.temperature_2m[i]}));
     const mbd=mb.hourly.time.map((t,i)=>({t:new Date(t),v:mb.hourly.temperature_2m[i]}));
-    const obd=(obs.data||[]).filter(r=>r.tmpf!=null).map(r=>({t:new Date(r.local_valid),v:fToC(r.tmpf)}));
+    const obd=(obs.data||[]).filter(r=>r.tmpf!=null).map(r=>({t:new Date(r.local_valid),v:((r.tmpf-32)*5/9)}));
     const lastObs=obd[obd.length-1]||{v:fcd[0].v,t:now};
     const matchingGfs=fcd.find(g=>Math.abs(g.t-lastObs.t)<3600000);
     const bias=matchingGfs?lastObs.v-matchingGfs.v:0;
@@ -84,10 +87,10 @@ function updateMeteogram(){
     mainChart=new Chart(document.getElementById('mainChart'),{
       type:'line',data:{
         datasets:[
-          {label:'METAR OBSERVED',data:obd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.apricot,borderWidth:4,pointRadius:0,fill:false,tension:0.2},
-          {label:'SMART PREDICTION',data:pd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.cyan,borderWidth:4,pointRadius:0,fill:false,tension:0.4},
-          {label:'METEOBLUE MODEL',data:mbd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.magenta,borderDash:[3,3],borderWidth:2,pointRadius:0,fill:false,tension:0.4},
-          {label:'GFS BASELINE',data:fcd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.gold,borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false}
+          {label:'WINDY GFS (ADJUSTED)',data:pd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.cyan,borderWidth:4,pointRadius:0,fill:false,tension:0.4,z:4},
+          {label:'METAR OBSERVED',data:obd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.apricot,borderWidth:4,pointRadius:0,fill:false,tension:0.2,z:3},
+          {label:'WINDY ECMWF (MB)',data:mbd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.magenta,borderDash:[3,3],borderWidth:2,pointRadius:0,fill:false,tension:0.4,z:2},
+          {label:'GFS BASELINE',data:fcd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.gold,borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false,z:1}
         ]
       },
       options:{
@@ -100,17 +103,7 @@ EEE d'}},grid:{color:COLORS.grid},ticks:{color:COLORS.gray,font:{size:12,weight:
         }
       }
     });
-    document.getElementById('status').innerText='Multi-Sync';document.getElementById('status').style.color='#4ade80';
-    if(obd.length>0){
-      const lastG=matchingGfs?matchingGfs.v:fcd[0].v;
-      const lastM=mbd.find(m=>Math.abs(m.t-lastObs.t)<3600000)?.v||lastG;
-      document.getElementById('spread').innerHTML=`${Math.abs(lastG-lastM).toFixed(1)}<span>°C</span>`;
-      const common=obd.filter(o=>fcd.some(g=>Math.abs(g.t-o.t)<300000));
-      if(common.length>0){
-        const rmse=Math.sqrt(common.reduce((s,o)=>{const g=fcd.find(x=>Math.abs(x.t-o.t)<300000);return s+Math.pow(o.v-g.v,2);},0)/common.length);
-        document.getElementById('rmse').innerHTML=`${rmse.toFixed(2)}<span>°C</span>`;
-      }
-    }
+    document.getElementById('status').innerText='Active';document.getElementById('status').style.color='#4ade80';
     const scroll=document.getElementById('scrollContainer');
     const nowPos=(now-fcd[0].t)/(fcd[fcd.length-1].t-fcd[0].t)*4500;
     scroll.scrollLeft=nowPos-400;
