@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WSSS Weather Dashboard</title>
+<title>WSSS Unified Weather Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -20,14 +20,13 @@ body{background:#222222;color:#EED3BA;font-family:'Inter',sans-serif;min-height:
 .val-lg{font-size:54px;font-weight:700;color:#EED3BA;line-height:1}
 .val-sm{font-size:22px;color:#CAC426;font-weight:500}
 .live{display:inline-block;border:1px solid #CAC426;color:#CAC426;font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700}
-.error{background:#b91c1c;color:#fff}
 .rtbn{background:transparent;color:#CAC426;border:1px solid #CAC426;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;transition:0.2s}
 .rtbn:hover{background:#CAC426;color:#222222}
 .rtbn.active{background:#CAC426;color:#222222}
 .raw-box{background:#1a1a1a;color:#888;border:1px solid #333;border-radius:6px;padding:10px;margin-top:10px;font-size:11px;max-height:150px;overflow:auto;font-family:monospace}
 .date-picker{background:#1a1a1a;color:#EED3BA;border:1px solid #333;border-radius:4px;padding:8px;font-size:12px;font-family:inherit}
 .date-picker::-webkit-calendar-picker-indicator{filter:invert(0.8) sepia(1) saturate(5) hue-rotate(20deg)}
-.chart-container{position:relative;height:450px;width:100%;margin-top:15px}
+.chart-container{position:relative;height:500px;width:100%;margin-top:15px}
 .time-controls{display:flex;gap:8px;margin-bottom:15px}
 </style>
 </head>
@@ -38,7 +37,7 @@ body{background:#222222;color:#EED3BA;font-family:'Inter',sans-serif;min-height:
     <div class="brand-title">WSSS Unified Weather</div>
   </div>
   <div class="clock" id="clk">--:--:-- SGT</div>
-  <span class="badge" id="fc">UNIFIED VIEW</span>
+  <span class="badge">METAR STATION</span>
 </div>
 <div class="card">
   <div class="sec-title">TEMPERATURE <span class="live" id="liveBadge">LIVE</span></div>
@@ -49,8 +48,8 @@ body{background:#222222;color:#EED3BA;font-family:'Inter',sans-serif;min-height:
   <button class="rtbn" onclick="load()">REFRESH ALL</button>
 </div>
 <div class="card">
-  <div class="sec-title">TEMPERATURE: UNIFIED FORECAST & HISTORICAL</div>
-  <div style="font-size:11px;color:#93c5fd;margin-bottom:12px">Gold = GFS Forecast | White = Observed | Click legends to toggle</div>
+  <div class="sec-title">TEMPERATURE: FORECAST & METAR HISTORY</div>
+  <div style="font-size:11px;color:#93c5fd;margin-bottom:12px">Gold = GFS | White = METAR History | Toggle with legends</div>
   <div class="time-controls">
     <button class="rtbn" onclick="setTimeRange(12)">12H</button>
     <button class="rtbn active" onclick="setTimeRange(24)">24H</button>
@@ -61,13 +60,8 @@ body{background:#222222;color:#EED3BA;font-family:'Inter',sans-serif;min-height:
   <div class="chart-container"><canvas id="mainChart"></canvas></div>
 </div>
 <div class="card">
-  <div class="sec-title">Precipitation &bull; Actual vs Forecast</div>
+  <div class="sec-title">PRECIPITATION: GFS VS ARCHIVE</div>
   <div class="chart-container" style="height:300px"><canvas id="precipChart"></canvas></div>
-</div>
-<div class="card">
-  <div class="sec-title">Raw Telemetry Data</div>
-  <div class="raw-box" id="raw">Waiting for payload...</div>
-  <div style="font-size:10px;color:#666;margin-top:10px">LAST PACKET: <span id="lobs">--</span></div>
 </div>
 <script>
 let mainChart,precipChart,timeRange=24,cache={};
@@ -82,8 +76,6 @@ function load(){
     const o=d.last_ob||(d.data&&d.data[0]);
     document.getElementById('tmp').innerText=o?fToC(o['airtemp[F]']||o.tmpf).toFixed(1):'--';
     document.getElementById('dew').innerText=o?fToC(o['dewpointtemp[F]']||o.dwpf).toFixed(1):'--';
-    document.getElementById('lobs').innerText=o?o.local_valid:'--';
-    document.getElementById('raw').innerText=JSON.stringify(o,null,2);
     b.innerText='LIVE';updateUnifiedChart();updatePrecipChart();
   }).catch(e=>{b.innerText='OFFLINE';b.className='live error';});
 }
@@ -100,17 +92,20 @@ function updateUnifiedChart(){
   ]).then(([fc,obs])=>{
     const fcd=fc.hourly.time.map((t,i)=>({t:new Date(t),v:fc.hourly.temperature_2m[i]})).filter(d=>d.t>=start&&d.t<=end);
     const obd=obs.data.filter(r=>r.tmpf!=null).map(r=>({t:new Date(r.local_valid),v:fToC(r.tmpf)})).filter(d=>d.t>=start&&d.t<=end);
-    const labels=[...new Set([...fcd.map(d=>d.t.toISOString()),...obd.map(d=>d.t.toISOString())])].sort().map(iso=>{const d=new Date(iso);return d.getHours()+':'+d.getMinutes().toString().padStart(2,'0');});
+    const allT=[...new Set([...fcd.map(d=>d.t.getTime()),...obd.map(d=>d.t.getTime())])].sort();
     if(mainChart)mainChart.destroy();
     mainChart=new Chart(document.getElementById('mainChart'),{
-      type:'line',data:{labels,datasets:[
-        {label:'Forecast (GFS)',data:labels.map(l=>{const d=fcd.find(x=> (x.t.getHours()+':'+x.t.getMinutes().toString().padStart(2,'0'))===l);return d?d.v:null;}),borderColor:COLORS.gold,borderDash:[5,5],borderWidth:1.5,fill:false,pointRadius:0,spanGaps:true},
-        {label:'Observed (ASOS)',data:labels.map(l=>{const d=obd.find(x=> (x.t.getHours()+':'+x.t.getMinutes().toString().padStart(2,'0'))===l);return d?d.v:null;}),borderColor:COLORS.apricot,borderWidth:2,fill:false,pointRadius:0,spanGaps:true}
-      ]},options:opts('Time','°C',true)
+      type:'line',data:{
+        labels:allT.map(t=>new Date(t).getHours()+':'+new Date(t).getMinutes().toString().padStart(2,'0')),
+        datasets:[
+          {label:'Forecast (GFS)',data:allT.map(t=>{const x=fcd.find(d=>d.t.getTime()===t);return x?x.v:null;}),borderColor:COLORS.gold,borderDash:[5,5],borderWidth:1.5,fill:false,pointRadius:0,spanGaps:true},
+          {label:'History (METAR/ASOS)',data:allT.map(t=>{const x=obd.find(d=>d.t.getTime()===t);return x?x.v:null;}),borderColor:COLORS.apricot,borderWidth:2.5,fill:false,pointRadius:0,spanGaps:true}
+        ]
+      },options:opts('°C')
     });
   });
 }
-function opts(xt,yt,showLegend){return{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:showLegend,position:'top',labels:{color:COLORS.gray,font:{size:10},boxWidth:12}},tooltip:{backgroundColor:COLORS.charcoal,borderColor:COLORS.border,borderWidth:1,titleColor:COLORS.gold}},scales:{x:{grid:{color:'#333'},ticks:{color:COLORS.gray,font:{size:10},maxRotation:45}},y:{grid:{color:'#333'},ticks:{color:COLORS.gray,font:{size:10}}}}};}
+function opts(yt){return{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,position:'top',labels:{color:COLORS.gray,font:{size:10}}},tooltip:{backgroundColor:COLORS.charcoal,borderColor:COLORS.border,borderWidth:1}},scales:{x:{grid:{color:'#333'},ticks:{color:COLORS.gray,font:{size:10}}},y:{grid:{color:'#333'},ticks:{color:COLORS.gray,font:{size:10}}}}};}
 function updatePrecipChart(){
   const now=nowSGT();const ds=now.toISOString().split('T')[0];
   const start=new Date(now.getTime()-12*3600*1000),end=new Date(now.getTime()+24*3600*1000);
@@ -124,8 +119,8 @@ function updatePrecipChart(){
     precipChart=new Chart(document.getElementById('precipChart'),{
       type:'line',data:{labels:fcd.map(d=>d.t.getHours()+':00'),datasets:[
         {label:'Forecast',data:fcd.map(d=>d.v),borderColor:COLORS.gold,borderDash:[5,5],borderWidth:1.5,fill:false,pointRadius:0},
-        {label:'Observed',data:ard.map(d=>d.v),borderColor:COLORS.apricot,borderWidth:2,fill:false,pointRadius:0}
-      ]},options:opts('Time','mm',true)
+        {label:'History',data:ard.map(d=>d.v),borderColor:COLORS.apricot,borderWidth:2,fill:false,pointRadius:0}
+      ]},options:opts('mm')
     });
   });
 }
