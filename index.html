@@ -19,6 +19,7 @@ body{background:#0f172a;color:#e2e8f0;font-family:'Segoe UI',sans-serif;min-heig
 .raw-box{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:6px;margin-top:8px;font-size:11px;max-height:120px;overflow:auto}
 .date-picker{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:6px}
 .date-picker::-webkit-calendar-picker-indicator{filter:invert(1)}
+.chart-container{position:relative;height:300px;width:100%}
 </style>
 </head>
 <body>
@@ -49,18 +50,18 @@ body{background:#0f172a;color:#e2e8f0;font-family:'Segoe UI',sans-serif;min-heig
 <div class="card">
   <div class="sec-title">Temperature History &bull; WSSS (NOAA ASOS)</div>
   <input type="date" id="datePicker" class="date-picker" onchange="loadHistoricalData()" />
-  <div class="raw-box"><canvas id="histChart" width="360" height="180"></canvas></div>
+  <div class="raw-box"><div class="chart-container"><canvas id="histChart"></canvas></div></div>
 </div>
 <div class="card">
   <div class="sec-title">FORECAST VS OBSERVED &bull; WSSS</div>
   <div style="font-size:11px;color:#93c5fd;margin-bottom:4px">Open-Meteo GFS (same model as Windy) vs NOAA ASOS 1-min</div>
   <input type="date" id="dateISO" class="date-picker" />
-  <div class="raw-box"><canvas id="tempChart" width="360" height="180"></canvas></div>
+  <div class="raw-box"><div class="chart-container"><canvas id="tempChart"></canvas></div></div>
 </div>
 <div class="card">
   <div class="sec-title">PRECIPITATION (FORECAST VS OBSERVED) &bull; WSSS</div>
   <div style="font-size:11px;color:#93c5fd;margin-bottom:4px">Open-Meteo GFS vs Singapore NEA Real-time Rainfall</div>
-  <div class="raw-box"><canvas id="precipChart" width="360" height="180"></canvas></div>
+  <div class="raw-box"><div class="chart-container"><canvas id="precipChart"></canvas></div></div>
 </div>
 <script>
 let histChart,tempChart,precipChart;
@@ -147,7 +148,6 @@ function loadHistoricalData(){
 function pad(n){return n.toString().padStart(2,'0');}
 
 const dateISOEl=document.getElementById('dateISO');
-const isToday=(dateISO===nowSGT().toISOString().split('T')[0]);
 dateISOEl.value=today.toISOString().split('T')[0];
 dateISOEl.addEventListener('change',updateFcChart);
 
@@ -155,7 +155,9 @@ function nowSGT(){return new Date(new Date().getTime()+8*3600*1000);}
 
 function updateFcChart(){
   const dateISO=dateISOEl.value||(function(){var n=nowSGT();return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate())})();
-  const isToday=(dateISO===nowSGT().toISOString().split('T')[0]);
+  const now=nowSGT();
+  const windowStart=new Date(now.getTime()-12*3600*1000);
+  const windowEnd=new Date(now.getTime()+24*3600*1000);
   Promise.all([
     fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=temperature_2m&timezone=Asia/Singapore').then(r=>r.json()),
     fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+dateISO).then(r=>r.json())
@@ -168,16 +170,14 @@ function updateFcChart(){
       const timePart=lv.replace('T',' ').split(' ')[1]||'';
       const hh=parseInt(timePart.split(':')[0],10)||0;
       const mm=parseInt(timePart.split(':')[1],10)||0;
-      return{label:pad(hh)+':'+pad(mm),temp:fToC(r.tmpf)};
+      return{label:pad(hh)+':'+pad(mm),temp:fToC(r.tmpf),time:new Date(lv)};
     });
-    const now=nowSGT();
-    const windowStart=new Date(now.getTime()-12*3600*1000);
-    const windowEnd=new Date(now.getTime()+12*3600*1000);
     const fcFiltered=fcTimes.map((t,i)=>({time:new Date(t),temp:fcTemps[i]})).filter(d=>d.time>=windowStart&&d.time<=windowEnd);
     const fcLabels=fcFiltered.map(d=>pad(d.time.getHours())+':'+pad(d.time.getMinutes()));
     const fcData=fcFiltered.map(d=>d.temp);
-    const asosLabels=asosData.map(d=>d.label);
-    const asosTemps=asosData.map(d=>d.temp);
+    const asosFiltered=asosData.filter(d=>d.time>=windowStart&&d.time<=windowEnd);
+    const asosLabels=asosFiltered.map(d=>d.label);
+    const asosTemps=asosFiltered.map(d=>d.temp);
     if(tempChart){tempChart.destroy();}
     const ctx=document.getElementById('tempChart').getContext('2d');
     tempChart=new Chart(ctx,{
@@ -193,26 +193,25 @@ function updateFcChart(){
 updateFcChart();
 
 function updatePrecipChart(){
-  const dateISO=dateISOEl.value||(function(){var n=nowSGT();return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate())})();
+  const now=nowSGT();
+  const windowStart=new Date(now.getTime()-12*3600*1000);
+  const windowEnd=new Date(now.getTime()+24*3600*1000);
   Promise.all([
     fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=precipitation&timezone=Asia/Singapore').then(r=>r.json()),
     fetch('https://api.data.gov.sg/v2/real-time/api/rainfall').then(r=>r.json())
   ]).then(([fc,nea])=>{
     const fcTimes=fc.hourly.time||[];
     const fcPrecip=fc.hourly.precipitation||[];
-    const now=nowSGT();
-    const windowStart=new Date(now.getTime()-12*3600*1000);
-    const windowEnd=new Date(now.getTime()+12*3600*1000);
     const fcFiltered=fcTimes.map((t,i)=>({time:new Date(t),precip:fcPrecip[i]})).filter(d=>d.time>=windowStart&&d.time<=windowEnd);
     const fcLabels=fcFiltered.map(d=>pad(d.time.getHours())+':'+pad(d.time.getMinutes()));
     const fcData=fcFiltered.map(d=>d.precip);
     const neaStations=nea.data?.stations||[];
-    const changiStation=neaStations.find(s=>s.name==='Changi')||neaStations[0];
+    const changiStation=neaStations.find(s=>s.name&&s.name.includes('Changi'))||neaStations[0];
     const neaReadings=changiStation?.readings||[];
     const neaData=neaReadings.map(r=>{
       const t=new Date(r.timestamp);
-      return{label:pad(t.getHours())+':'+pad(t.getMinutes()),precip:r.value};
-    });
+      return{label:pad(t.getHours())+':'+pad(t.getMinutes()),precip:r.value||0,time:t};
+    }).filter(d=>d.time>=windowStart&&d.time<=windowEnd);
     const neaLabels=neaData.map(d=>d.label);
     const neaPrecip=neaData.map(d=>d.precip);
     if(precipChart){precipChart.destroy();}
