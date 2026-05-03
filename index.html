@@ -6,225 +6,250 @@
 <title>WSSS Weather Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#0f172a;color:#e2e8f0;font-family:'Segoe UI',sans-serif;min-height:100vh;padding:16px}
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-.clock{font-size:13px;color:#64748b;font-variant-numeric:tabular-nums}
-.badge{background:#1e3a5f;color:#93c5fd;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600}
-.card{background:#1e293b;border-radius:16px;padding:18px;margin-bottom:14px;border:1px solid #334155}
-.sec-title{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#64748b;margin-bottom:12px}
-.live{display:inline-block;background:#0b4e3b;color:#34d399;font-size:11px;padding:2px 8px;border-radius:8px}
-.rtbn{background:#1e3a5f;color:#93c5fd;border:none;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px}
-.rtbn:hover{background:#1d4ed8}
-.raw-box{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:6px;margin-top:8px;font-size:11px;max-height:120px;overflow:auto}
-.date-picker{background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:6px}
-.date-picker::-webkit-calendar-picker-indicator{filter:invert(1)}
-.chart-container{position:relative;height:300px;width:100%}
+body{background:#222222;color:#EED3BA;font-family:'Inter',sans-serif;min-height:100vh;padding:20px 16px}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding:12px 0;border-bottom:1px solid #333}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-title{font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#EED3BA}
+.brand-sub{font-size:10px;color:#888;letter-spacing:1px;text-transform:uppercase}
+.clock{font-size:13px;color:#999;font-variant-numeric:tabular-nums;font-weight:400;letter-spacing:0.5px}
+.badge{background:#CAC426;color:#222222;padding:3px 10px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase}
+.card{background:#2a2a2a;border-radius:8px;padding:20px;margin-bottom:16px;border:1px solid #333}
+.card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px}
+.sec-title{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#888;margin-bottom:0}
+.sec-subtitle{font-size:11px;color:#666;margin-top:4px}
+.live{display:inline-block;background:transparent;color:#CAC426;font-size:9px;padding:2px 8px;border-radius:3px;border:1px solid #CAC426;letter-spacing:1px;text-transform:uppercase;font-weight:600}
+.rtbn{background:transparent;color:#EED3BA;border:1px solid #444;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:500;letter-spacing:0.5px;transition:all 0.2s}
+.rtbn:hover{background:#CAC426;color:#222;border-color:#CAC426}
+.raw-box{background:#1a1a1a;color:#999;border:1px solid #333;border-radius:6px;padding:10px;margin-top:10px;font-size:10px;max-height:120px;overflow:auto;font-family:'Courier New',monospace;line-height:1.5}
+.date-picker{background:#1a1a1a;color:#EED3BA;border:1px solid #444;border-radius:4px;padding:6px 10px;font-size:11px;font-family:'Inter',sans-serif}
+.date-picker::-webkit-calendar-picker-indicator{filter:invert(0.7)}
+.chart-container{position:relative;height:280px;width:100%}
+.temp-display{display:flex;align-items:baseline;gap:12px;margin:8px 0}
+.temp-value{font-size:52px;font-weight:300;color:#EED3BA;line-height:1}
+.temp-unit{font-size:18px;color:#888;font-weight:300}
+.dew-label{font-size:11px;color:#666}
+.dew-value{font-size:13px;color:#999}
+.divider{width:1px;height:40px;background:#333}
+.ring-wrap{display:flex;align-items:center;gap:8px;font-size:11px;color:#666}
+.lobs-row{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.lobs-label{font-size:10px;color:#555;letter-spacing:1px;text-transform:uppercase}
+.lobs-value{font-size:11px;color:#888}
+.refresh-area{display:flex;align-items:center;gap:10px;margin-top:10px}
 </style>
 </head>
 <body>
 <div class="topbar">
-  <div class="clock" id="clk">--:--:-- SGT</div>
-  <span class="badge" id="fc">ASOS</span>
-</div>
-<div class="card">
-  <div class="sec-title">TEMPERATURE <span class="live">1-min live data</span></div>
-  <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-    <span style="font-size:48px;font-weight:600" id="tmp">--</span><span class="unit">&deg;C</span>
-    <span style="font-size:24px;color:#64748b">Dew: <span id="dew">--</span>&deg;C</span>
+  <div class="brand">
+    <div>
+      <div class="brand-title">WSSS Weather</div>
+      <div class="brand-sub">Singapore Changi Airport</div>
+    </div>
   </div>
-  <button class="rtbn" onclick="load()">&#x21bb; Refresh</button>
+  <div style="display:flex;align-items:center;gap:14px">
+    <span class="badge" id="fc">ASOS</span>
+    <span class="clock" id="clk">--:--:-- SGT</span>
+  </div>
 </div>
+
 <div class="card">
-  <div class="sec-title"><div class="s">Raw ASOS Observation</div><div class="raw" id="raw">Loading...</div></div>
-  <span>Last observed: <span id="lobs">--</span></span>
-  <button class="rtbn" onclick="load()">&#x21bb; Refresh</button>
+  <div class="card-header">
+    <div>
+      <div class="sec-title">Temperature <span class="live">1-min live</span></div>
+    </div>
+    <button class="rtbn" onclick="load()">&#x21bb; Refresh</button>
+  </div>
+  <div style="display:flex;align-items:center;gap:24px">
+    <div class="temp-display">
+      <span class="temp-value" id="tmp">--</span><span class="temp-unit">°C</span>
+    </div>
+    <div class="divider"></div>
+    <div>
+      <div class="dew-label">Dew Point</div>
+      <div style="display:flex;align-items:baseline;gap:4px"><span class="dew-value" id="dew">--</span><span style="font-size:10px;color:#555">°C</span></div>
+    </div>
+  </div>
+  <div class="lobs-row">
+    <span class="lobs-label">Last observed: <span class="lobs-value" id="lobs">--</span></span>
+    <div class="ring-wrap">
+      <svg width="20" height="20" viewBox="0 0 36 36" style="transform:rotate(-90deg)">
+        <circle cx="18" cy="18" r="8" fill="none" stroke="#333" stroke-width="4"/>
+        <circle id="ring" cx="18" cy="18" r="8" fill="none" stroke="#CAC426" stroke-width="4" stroke-dasharray="0,53" stroke-linecap="round"/>
+      </svg>
+      <span id="nxt">Next refresh in 60s</span>
+    </div>
+  </div>
 </div>
-<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-  <svg width="36" height="36" viewBox="0 0 36 36">
-    <circle cx="18" cy="18" r="16" fill="none" stroke="#1e293b" stroke-width="3"/>
-    <circle id="ring" cx="18" cy="18" r="16" fill="none" stroke="#4fc3f7" stroke-width="3" stroke-dasharray="100,53" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 18 18)"/>
-  </svg>
-  <span style="font-size:12px;color:#64748b" id="nxt">Next refresh in 60s</span>
-</div>
+
 <div class="card">
-  <div class="sec-title">Temperature History &bull; WSSS (NOAA ASOS)</div>
-  <input type="date" id="datePicker" class="date-picker" onchange="loadHistoricalData()" />
-  <div class="raw-box"><div class="chart-container"><canvas id="histChart"></canvas></div></div>
+  <div class="card-header">
+    <div>
+      <div class="sec-title">Raw ASOS Observation</div>
+    </div>
+    <button class="rtbn" onclick="load()">&#x21bb; Refresh</button>
+  </div>
+  <div class="raw-box" id="raw">Loading...</div>
 </div>
+
 <div class="card">
-  <div class="sec-title">FORECAST VS OBSERVED &bull; WSSS</div>
-  <div style="font-size:11px;color:#93c5fd;margin-bottom:4px">Open-Meteo GFS (same model as Windy) vs NOAA ASOS 1-min</div>
-  <input type="date" id="dateISO" class="date-picker" />
-  <div class="raw-box"><div class="chart-container"><canvas id="tempChart"></canvas></div></div>
+  <div class="card-header">
+    <div>
+      <div class="sec-title">Temperature History &bull; WSSS (NOAA ASOS)</div>
+    </div>
+    <input type="date" id="datePicker" class="date-picker" onchange="loadHistoricalData()">
+  </div>
+  <div class="chart-container"><canvas id="histChart"></canvas></div>
 </div>
+
 <div class="card">
-  <div class="sec-title">PRECIPITATION (FORECAST VS OBSERVED) &bull; WSSS</div>
-  <div style="font-size:11px;color:#93c5fd;margin-bottom:4px">Open-Meteo GFS vs Singapore NEA Real-time Rainfall</div>
-  <div class="raw-box"><div class="chart-container"><canvas id="precipChart"></canvas></div></div>
+  <div class="card-header">
+    <div>
+      <div class="sec-title">Forecast vs Observed &bull; WSSS</div>
+      <div class="sec-subtitle">Open-Meteo GFS (same model as Windy) vs NOAA ASOS 1-min</div>
+    </div>
+    <input type="date" id="dateISO" class="date-picker">
+  </div>
+  <div class="chart-container"><canvas id="tempChart"></canvas></div>
 </div>
+
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="sec-title">Precipitation (Forecast vs Observed) &bull; WSSS</div>
+      <div class="sec-subtitle">Open-Meteo GFS vs Singapore NEA Real-time Rainfall</div>
+    </div>
+  </div>
+  <div class="chart-container"><canvas id="precipChart"></canvas></div>
+</div>
+
 <script>
 let histChart,tempChart,precipChart;
 function updateClock(){const d=new Date();const h=d.getHours().toString().padStart(2,'0'),m=d.getMinutes().toString().padStart(2,'0'),s=d.getSeconds().toString().padStart(2,'0');document.getElementById('clk').innerText=h+':'+m+':'+s+' SGT';}
 updateClock();setInterval(updateClock,1000);
-
+const chartDefaults={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#EED3BA',font:{size:10,family:'Inter'},padding:16,usePointStyle:true}}},scales:{x:{ticks:{color:'#666',font:{size:9}},grid:{color:'#2e2e2e'},border:{color:'#333'}},y:{ticks:{color:'#666',font:{size:9}},grid:{color:'#2e2e2e'},border:{color:'#333'}}}};
 function load(){
-  fetch('https://mesonet.agron.iastate.edu/json/current.py?station=WSSS&network=SG__ASOS&callback=')
-  .then(r=>r.json())
-  .then(d=>{
-    if(!d||!d.data)return;
-    const o=d.data[0];
-    if(!o)return;
-    const tmpC=o.tmpf!=null?fToC(o.tmpf):null;
-    const dewC=o.dwpf!=null?fToC(o.dwpf):null;
-    document.getElementById('tmp').innerText=tmpC!=null?tmpC.toFixed(1):'--';
-    document.getElementById('dew').innerText=dewC!=null?dewC.toFixed(1):'--';
-    document.getElementById('lobs').innerText=o.local_valid||'--';
-    document.getElementById('raw').innerText=JSON.stringify(o,null,2);
-    updateFcChart();
-    updatePrecipChart();
-  })
-  .catch(e=>console.warn('Load:',e));
+fetch('https://mesonet.agron.iastate.edu/json/current.py?station=WSSS&network=SG__ASOS&callback=')
+.then(r=>r.json())
+.then(d=>{
+if(!d||!d.data)return;
+const o=d.data[0];if(!o)return;
+const tmpC=o.tmpf!=null?fToC(o.tmpf):null;
+const dewC=o.dwpf!=null?fToC(o.dwpf):null;
+document.getElementById('tmp').innerText=tmpC!=null?tmpC.toFixed(1):'--';
+document.getElementById('dew').innerText=dewC!=null?dewC.toFixed(1):'--';
+document.getElementById('lobs').innerText=o.local_valid||'--';
+document.getElementById('raw').innerText=JSON.stringify(o,null,2);
+updateFcChart();updatePrecipChart();
+}).catch(e=>console.warn('Load:',e));
 }
 function fToC(f){return(f-32)*5/9;}
 function intoMm(inch){return inch*25.4;}
-
 load();
 let cd=60;
 setInterval(()=>{
-  cd--;
-  if(cd<=0){load();cd=60;}
-  document.getElementById('nxt').innerText='Next refresh in '+cd+'s';
-  const pct=((60-cd)/60)*100;
-  document.getElementById('ring').style.strokeDasharray=pct+','+((100-pct)+53);
+cd--;if(cd<=0){load();cd=60;}
+document.getElementById('nxt').innerText='Next refresh in '+cd+'s';
+const pct=((60-cd)/60)*100;
+document.getElementById('ring').style.strokeDasharray=pct+','+((100-pct)+53);
 },1000);
-
 const dp=document.getElementById('datePicker');
 const today=new Date();
 dp.value=today.toISOString().split('T')[0];
 dp.addEventListener('change',loadHistoricalData);
 loadHistoricalData();
-
 function loadHistoricalData(){
-  const dateISO=dp.value;
-  if(!dateISO)return;
-  const d=new Date(dateISO);
-  if(isNaN(d))return;
-  const yyyy=d.getFullYear();
-  const mm=(d.getMonth()+1).toString().padStart(2,'0');
-  const dd=d.getDate().toString().padStart(2,'0');
-  const dateStr=yyyy+'-'+mm+'-'+dd;
-  fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+dateStr)
-  .then(r=>r.json())
-  .then(d=>{
-    if(!d||!d.data)return;
-    const temps=d.data.filter(r=>r.tmpf!=null).map(r=>{
-      const lv=r.local_valid||'';
-      const timePart=lv.replace('T',' ').split(' ')[1]||'';
-      const hh=parseInt(timePart.split(':')[0],10)||0;
-      const mm=parseInt(timePart.split(':')[1],10)||0;
-      return{label:pad(hh)+':'+pad(mm),temp:fToC(r.tmpf)};
-    });
-    const dews=d.data.filter(r=>r.dwpf!=null).map(r=>{
-      const lv=r.local_valid||'';
-      const timePart=lv.replace('T',' ').split(' ')[1]||'';
-      const hh=parseInt(timePart.split(':')[0],10)||0;
-      const mm=parseInt(timePart.split(':')[1],10)||0;
-      return{label:pad(hh)+':'+pad(mm),temp:fToC(r.dwpf)};
-    });
-    if(histChart){histChart.destroy();}
-    const ctx=document.getElementById('histChart').getContext('2d');
-    histChart=new Chart(ctx,{
-      type:'line',
-      data:{
-        labels:temps.map(t=>t.label),
-        datasets:[{label:'Temp (C)',data:temps.map(t=>t.temp),borderColor:'#3b82f6',fill:false,tension:0.1},{label:'Dew Point (C)',data:dews.map(t=>t.temp),borderColor:'#10b981',borderDash:[5,5],fill:false,tension:0.1}]
-      },
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#e2e8f0',font:{size:10}}}},scales:{x:{ticks:{color:'#94a3b8',font:{size:9}}},y:{ticks:{color:'#94a3b8',font:{size:9}}}}}
-    });
-  })
-  .catch(e=>console.warn('History:',e));
+const dateISO=dp.value;if(!dateISO)return;
+const d=new Date(dateISO);if(isNaN(d))return;
+const yyyy=d.getFullYear();
+const mm=(d.getMonth()+1).toString().padStart(2,'0');
+const dd=d.getDate().toString().padStart(2,'0');
+const dateStr=yyyy+'-'+mm+'-'+dd;
+fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+dateStr)
+.then(r=>r.json())
+.then(d=>{
+if(!d||!d.data)return;
+const temps=d.data.filter(r=>r.tmpf!=null).map(r=>{
+const lv=r.local_valid||'';
+const timePart=lv.replace('T',' ').split(' ')[1]||'';
+const hh=parseInt(timePart.split(':')[0],10)||0;
+const mm=parseInt(timePart.split(':')[1],10)||0;
+return{label:pad(hh)+':'+pad(mm),temp:fToC(r.tmpf)};
+});
+const dews=d.data.filter(r=>r.dwpf!=null).map(r=>{
+const lv=r.local_valid||'';
+const timePart=lv.replace('T',' ').split(' ')[1]||'';
+const hh=parseInt(timePart.split(':')[0],10)||0;
+const mm=parseInt(timePart.split(':')[1],10)||0;
+return{label:pad(hh)+':'+pad(mm),temp:fToC(r.dwpf)};
+});
+if(histChart){histChart.destroy();}
+const ctx=document.getElementById('histChart').getContext('2d');
+histChart=new Chart(ctx,{type:'line',data:{labels:temps.map(t=>t.label),datasets:[{label:'Temp (°C)',data:temps.map(t=>t.temp),borderColor:'#CAC426',backgroundColor:'rgba(202,196,38,0.05)',fill:true,tension:0.3,pointRadius:0,borderWidth:2},{label:'Dew Point (°C)',data:dews.map(t=>t.temp),borderColor:'#EED3BA',borderDash:[4,4],backgroundColor:'rgba(238,211,186,0.03)',fill:true,tension:0.3,pointRadius:0,borderWidth:1.5}]},options:JSON.parse(JSON.stringify(chartDefaults))});
+}).catch(e=>console.warn('History:',e));
 }
 function pad(n){return n.toString().padStart(2,'0');}
-
 const dateISOEl=document.getElementById('dateISO');
 dateISOEl.value=today.toISOString().split('T')[0];
 dateISOEl.addEventListener('change',updateFcChart);
-
 function nowSGT(){return new Date(new Date().getTime()+8*3600*1000);}
-
 function updateFcChart(){
-  const dateISO=dateISOEl.value||(function(){var n=nowSGT();return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate())})();
-  const now=nowSGT();
-  const windowStart=new Date(now.getTime()-12*3600*1000);
-  const windowEnd=new Date(now.getTime()+24*3600*1000);
-  Promise.all([
-    fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=temperature_2m&timezone=Asia/Singapore').then(r=>r.json()),
-    fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+dateISO).then(r=>r.json())
-  ]).then(([fc,obs])=>{
-    const fcTimes=fc.hourly.time||[];
-    const fcTemps=fc.hourly.temperature_2m||[];
-    const asosHistory=obs.data||[];
-    const asosData=asosHistory.filter(r=>r.tmpf!=null).map(r=>{
-      const lv=r.local_valid||'';
-      const timePart=lv.replace('T',' ').split(' ')[1]||'';
-      const hh=parseInt(timePart.split(':')[0],10)||0;
-      const mm=parseInt(timePart.split(':')[1],10)||0;
-      return{label:pad(hh)+':'+pad(mm),temp:fToC(r.tmpf),time:new Date(lv)};
-    });
-    const fcFiltered=fcTimes.map((t,i)=>({time:new Date(t),temp:fcTemps[i]})).filter(d=>d.time>=windowStart&&d.time<=windowEnd);
-    const fcLabels=fcFiltered.map(d=>pad(d.time.getHours())+':'+pad(d.time.getMinutes()));
-    const fcData=fcFiltered.map(d=>d.temp);
-    const asosFiltered=asosData.filter(d=>d.time>=windowStart&&d.time<=windowEnd);
-    const asosLabels=asosFiltered.map(d=>d.label);
-    const asosTemps=asosFiltered.map(d=>d.temp);
-    if(tempChart){tempChart.destroy();}
-    const ctx=document.getElementById('tempChart').getContext('2d');
-    tempChart=new Chart(ctx,{
-      type:'line',
-      data:{
-        labels:fcLabels.length>asosLabels.length?fcLabels:asosLabels,
-        datasets:[{label:'Forecast (GFS/Windy)',data:fcData,borderColor:'#f97316',borderDash:[5,5],fill:false,tension:0.1},{label:'Observed (NOAA ASOS)',data:asosTemps,borderColor:'#3b82f6',fill:false,tension:0.1}]
-      },
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#e2e8f0',font:{size:10}}}},scales:{x:{ticks:{color:'#94a3b8',font:{size:9}}},y:{ticks:{color:'#94a3b8',font:{size:9}}}}}
-    });
-  }).catch(e=>console.warn('FC:',e));
+const dateISO=dateISOEl.value||(function(){var n=nowSGT();return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate())})();
+const now=nowSGT();
+const windowStart=new Date(now.getTime()-12*3600*1000);
+const windowEnd=new Date(now.getTime()+24*3600*1000);
+Promise.all([
+fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=temperature_2m&timezone=Asia/Singapore').then(r=>r.json()),
+fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+dateISO).then(r=>r.json())
+]).then(([fc,obs])=>{
+const fcTimes=fc.hourly.time||[];
+const fcTemps=fc.hourly.temperature_2m||[];
+const asosHistory=obs.data||[];
+const asosData=asosHistory.filter(r=>r.tmpf!=null).map(r=>{
+const lv=r.local_valid||'';
+const timePart=lv.replace('T',' ').split(' ')[1]||'';
+const hh=parseInt(timePart.split(':')[0],10)||0;
+const mm=parseInt(timePart.split(':')[1],10)||0;
+return{label:pad(hh)+':'+pad(mm),temp:fToC(r.tmpf),time:new Date(lv)};
+});
+const fcFiltered=fcTimes.map((t,i)=>({time:new Date(t),temp:fcTemps[i]})).filter(d=>d.time>=windowStart&&d.time<=windowEnd);
+const fcLabels=fcFiltered.map(d=>pad(d.time.getHours())+':'+pad(d.time.getMinutes()));
+const fcData=fcFiltered.map(d=>d.temp);
+const asosFiltered=asosData.filter(d=>d.time>=windowStart&&d.time<=windowEnd);
+const asosLabels=asosFiltered.map(d=>d.label);
+const asosTemps=asosFiltered.map(d=>d.temp);
+if(tempChart){tempChart.destroy();}
+const ctx=document.getElementById('tempChart').getContext('2d');
+tempChart=new Chart(ctx,{type:'line',data:{labels:fcLabels.length>asosLabels.length?fcLabels:asosLabels,datasets:[{label:'Forecast (GFS/Windy)',data:fcData,borderColor:'#CAC426',borderDash:[5,5],fill:false,tension:0.3,pointRadius:0,borderWidth:1.5},{label:'Observed (NOAA ASOS)',data:asosTemps,borderColor:'#EED3BA',fill:false,tension:0.3,pointRadius:2,pointBackgroundColor:'#EED3BA',borderWidth:2}]},options:JSON.parse(JSON.stringify(chartDefaults))});
+}).catch(e=>console.warn('FC:',e));
 }
 updateFcChart();
-
 function updatePrecipChart(){
-  const now=nowSGT();
-  const windowStart=new Date(now.getTime()-12*3600*1000);
-  const windowEnd=new Date(now.getTime()+24*3600*1000);
-  Promise.all([
-    fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=precipitation&timezone=Asia/Singapore').then(r=>r.json()),
-    fetch('https://api.data.gov.sg/v2/real-time/api/rainfall').then(r=>r.json())
-  ]).then(([fc,nea])=>{
-    const fcTimes=fc.hourly.time||[];
-    const fcPrecip=fc.hourly.precipitation||[];
-    const fcFiltered=fcTimes.map((t,i)=>({time:new Date(t),precip:fcPrecip[i]})).filter(d=>d.time>=windowStart&&d.time<=windowEnd);
-    const fcLabels=fcFiltered.map(d=>pad(d.time.getHours())+':'+pad(d.time.getMinutes()));
-    const fcData=fcFiltered.map(d=>d.precip);
-    const neaStations=nea.data?.stations||[];
-    const changiStation=neaStations.find(s=>s.name&&s.name.includes('Changi'))||neaStations[0];
-    const neaReadings=changiStation?.readings||[];
-    const neaData=neaReadings.map(r=>{
-      const t=new Date(r.timestamp);
-      return{label:pad(t.getHours())+':'+pad(t.getMinutes()),precip:r.value||0,time:t};
-    }).filter(d=>d.time>=windowStart&&d.time<=windowEnd);
-    const neaLabels=neaData.map(d=>d.label);
-    const neaPrecip=neaData.map(d=>d.precip);
-    if(precipChart){precipChart.destroy();}
-    const ctx=document.getElementById('precipChart').getContext('2d');
-    precipChart=new Chart(ctx,{
-      type:'line',
-      data:{
-        labels:fcLabels.length>neaLabels.length?fcLabels:neaLabels,
-        datasets:[{label:'Forecast (GFS)',data:fcData,borderColor:'#f97316',borderDash:[5,5],fill:false,tension:0.1},{label:'Observed (NEA Rainfall)',data:neaPrecip,borderColor:'#3b82f6',fill:false,tension:0.1}]
-      },
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{color:'#e2e8f0',font:{size:10}}}},scales:{x:{ticks:{color:'#94a3b8',font:{size:9}}},y:{title:{display:true,text:'mm',color:'#94a3b8'},ticks:{color:'#94a3b8',font:{size:9}}}}}
-    });
-  }).catch(e=>console.warn('Precip:',e));
+const now=nowSGT();
+const windowStart=new Date(now.getTime()-12*3600*1000);
+const windowEnd=new Date(now.getTime()+24*3600*1000);
+Promise.all([
+fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=precipitation&timezone=Asia/Singapore').then(r=>r.json()),
+fetch('https://api.data.gov.sg/v2/real-time/api/rainfall').then(r=>r.json())
+]).then(([fc,nea])=>{
+const fcTimes=fc.hourly.time||[];
+const fcPrecip=fc.hourly.precipitation||[];
+const fcFiltered=fcTimes.map((t,i)=>({time:new Date(t),precip:fcPrecip[i]})).filter(d=>d.time>=windowStart&&d.time<=windowEnd);
+const fcLabels=fcFiltered.map(d=>pad(d.time.getHours())+':'+pad(d.time.getMinutes()));
+const fcData=fcFiltered.map(d=>d.precip);
+const neaStations=nea.data?.stations||[];
+const changiStation=neaStations.find(s=>s.name&&s.name.includes('Changi'))||neaStations[0];
+const neaReadings=changiStation?.readings||[];
+const neaData=neaReadings.map(r=>{
+const t=new Date(r.timestamp);
+return{label:pad(t.getHours())+':'+pad(t.getMinutes()),precip:r.value||0,time:t};
+}).filter(d=>d.time>=windowStart&&d.time<=windowEnd);
+const neaLabels=neaData.map(d=>d.label);
+const neaPrecip=neaData.map(d=>d.precip);
+if(precipChart){precipChart.destroy();}
+const ctx=document.getElementById('precipChart').getContext('2d');
+precipChart=new Chart(ctx,{type:'line',data:{labels:fcLabels.length>neaLabels.length?fcLabels:neaLabels,datasets:[{label:'Forecast (GFS)',data:fcData,borderColor:'#CAC426',borderDash:[5,5],fill:false,tension:0.3,pointRadius:0,borderWidth:1.5},{label:'Observed (NEA Rainfall)',data:neaPrecip,borderColor:'#EED3BA',fill:false,tension:0.3,pointRadius:2,pointBackgroundColor:'#EED3BA',borderWidth:2}]},options:{...JSON.parse(JSON.stringify(chartDefaults)),scales:{...JSON.parse(JSON.stringify(chartDefaults)).scales,y:{...JSON.parse(JSON.stringify(chartDefaults)).scales.y,title:{display:true,text:'mm',color:'#666',font:{size:10}}}}}});
+}).catch(e=>console.warn('Precip:',e));
 }
 updatePrecipChart();
 </script>
