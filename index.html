@@ -38,53 +38,42 @@ body{background:#0f172a;color:#e2e8f0;font-family:'Segoe UI',sans-serif;min-heig
 <div class="card">
   <div class="sn">NOAA ASOS &bull; WSSS</div>
   <div class="sf">Singapore Changi</div>
-  <div class="live">1-min live data</div>
-  <div class="tmp"><span id="temp">--</span> <span class="unit">&deg;C</span></div>
+  <span class="live">1-min live data</span>
+  <div class="tmp"><span id="temp">--</span>&nbsp;<span class="unit">&deg;C</span></div>
   <div class="dp">Dew point: <span id="dp">--</span></div>
   <div class="grid">
-    <div class="stat"><div class="sl">WIND</div><div class="sv" id="wind">--</div></div>
-    <div class="stat"><div class="sl">PRESSURE</div><div class="sv" id="pres">--</div></div>
-    <div class="stat"><div class="sl">VISIBILITY</div><div class="sv" id="vis">--</div></div>
-    <div class="stat"><div class="sl">MAX TODAY</div><div class="sv" id="tmax">-- &deg;C</div></div>
+    <div class="stat"><div class="sl">Wind</div><div class="sv" id="wind">--</div></div>
+    <div class="stat"><div class="sl">Pressure</div><div class="sv" id="pres">--</div></div>
+    <div class="stat"><div class="sl">Visibility</div><div class="sv" id="vis">--</div></div>
+    <div class="stat"><div class="sl">Max Today</div><div class="sv" id="tmax">-- &deg;C</div></div>
   </div>
-  <div class="stat" style="margin-top:8px">
-    <div class="sl">HUMIDITY</div>
-    <div class="sv" id="hum">--%</div>
-    <div id="hbar" style="height:4px;background:#4fc3f7;width:0%;border-radius:2px;margin-top:4px"></div>
-  </div>
-  <div class="raw-box">
-    <div class="sl">RAW ASOS OBSERVATION</div>
-    <div id="raw" class="raw">Loading...</div>
-  </div>
+  <div class="stat" style="margin-bottom:0"><div class="sl">Humidity</div><div class="sv"><span id="hum">--</span>%</div></div>
+  <div class="raw-box"><div class="sl">Raw ASOS Observation</div><div class="raw" id="raw">Loading...</div></div>
   <div class="footer">
-    <span>Last observed: <span id="obs">--</span></span>
-    <button onclick="load()" class="rbtn">↻ Refresh</button>
-  </div>
-  <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
-    <svg width="20" height="20" viewBox="0 0 20 20">
-      <circle cx="10" cy="10" r="8" fill="none" stroke="#1e3a5f" stroke-width="2"/>
-      <circle id="ring" cx="10" cy="10" r="8" fill="none" stroke="#4fc3f7" stroke-width="2"
-        stroke-dasharray="50.27" stroke-dashoffset="0" stroke-linecap="round"
-        transform="rotate(-90 10 10)"/>
-    </svg>
-    <span id="nxt" style="color:#64748b;font-size:12px">Next refresh in 60s</span>
+    <span>Last observed: <span id="lobs">--</span></span>
+    <button class="rbtn" onclick="load()">&#x21bb; Refresh</button>
   </div>
 </div>
-<div class="card">
-  <div class="sec-title">TEMPERATURE HISTORY &bull; WSSS (NOAA ASOS)</div>
-  <div style="height:200px;position:relative">
-    <canvas id="tempChart"></canvas>
-  </div>
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+  <svg width="36" height="36" viewBox="0 0 36 36">
+    <circle cx="18" cy="18" r="16" fill="none" stroke="#1e293b" stroke-width="3"/>
+    <circle id="ring" cx="18" cy="18" r="16" fill="none" stroke="#4fc3f7" stroke-width="3"
+      stroke-dasharray="100.53" stroke-dashoffset="0" stroke-linecap="round"
+      transform="rotate(-90 18 18)"/>
+  </svg>
+  <span style="font-size:12px;color:#64748b" id="nxt">Next refresh in 60s</span>
 </div>
 <div class="card">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-    <div class="sec-title">FORECAST VS OBSERVED &bull; WSSS</div>
-    <span id="fcbadge" style="background:#1e3a5f;color:#93c5fd;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600">-- vs Forecast</span>
+  <div class="sec-title">Temperature History &bull; WSSS (NOAA ASOS)</div>
+  <div style="position:relative;height:180px;"><canvas id="tempChart"></canvas></div>
+</div>
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+    <div class="sec-title" style="margin-bottom:0">Forecast vs Observed &bull; WSSS</div>
+    <span class="badge" id="fcbadge" style="font-size:11px;">-- vs Forecast</span>
   </div>
-  <div class="dp">Open-Meteo GFS (same model as Windy) vs NOAA ASOS 1-min</div>
-  <div style="height:260px;position:relative;margin-top:12px">
-    <canvas id="compareChart"></canvas>
-  </div>
+  <div style="font-size:11px;color:#64748b;margin-bottom:10px;">Open-Meteo GFS (same model as Windy) vs NOAA ASOS 1-min</div>
+  <div style="position:relative;height:220px;"><canvas id="compareChart"></canvas></div>
 </div>
 <script>
 var histChart=null,fcChart=null;
@@ -95,7 +84,6 @@ function miToKm(m){return Math.round(m*16093)/10000;}
 function pad(n){return n<10?'0'+n:''+n;}
 function nowSGT(){return new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Singapore'}));}
 function setText(id,val){var el=document.getElementById(id);if(el)el.textContent=val;}
-
 function load(){
   var cb='_asos'+Date.now();
   window[cb]=function(d){
@@ -109,8 +97,8 @@ function load(){
       var vis=obs['visibility[mile]']!=null?miToKm(obs['visibility[mile]']):null;
       setText('raw',obs['raw']||'OK');
       if(tempC!==null){
-        setText('temp',tempC+'\u00b0C');
-        setText('dp',(dewC!==null?dewC:'--')+'\u00b0C');
+        setText('temp',tempC+'°C');
+        setText('dp',(dewC!==null?dewC:'--')+'°C');
         setText('wind',(wsKph!==null?wsKph:'--')+' km/h');
         setText('pres',(pres!==null?pres:'--')+' hPa');
         setText('vis',(vis!==null?vis:'--')+' km');
@@ -122,9 +110,10 @@ function load(){
         var mx=sDate===today?Math.max(stored,tempC):tempC;
         localStorage.setItem('wsss_tmax',mx);
         localStorage.setItem('wsss_tmax_date',today);
-        setText('tmax',mx+'\u00b0C');
+        setText('tmax',mx+'°C');
         var sgt=nowSGT();
         var lbl=pad(sgt.getHours())+':'+pad(sgt.getMinutes());
+        setText('lobs',lbl);
         obsHistory.push({label:lbl,temp:tempC,dew:dewC});
         if(obsHistory.length>90)obsHistory.shift();
         updateHistChart();
@@ -140,7 +129,6 @@ function load(){
   el.onerror=function(){setText('raw','Network error');delete window[cb];};
   document.head.appendChild(el);
 }
-
 function updateHistChart(){
   var labels=obsHistory.map(function(o){return o.label;});
   var temps=obsHistory.map(function(o){return o.temp;});
@@ -165,7 +153,6 @@ function updateHistChart(){
     histChart.update('none');
   }
 }
-
 function loadAsosHistory(){
   var now=nowSGT();
   var dateISO=now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate());
@@ -176,12 +163,11 @@ function loadAsosHistory(){
       asosHistory=d.data.filter(function(r){return r.tmpf!=null;}).map(function(r){
         var ut=new Date(r.utc_valid.replace(' ','T')+':00Z');
         var st=new Date(ut.toLocaleString('en-US',{timeZone:'Asia/Singapore'}));
-        return{label:pad(st.getHours())+':'+pad(st.getMinutes()),temp:fToC(r.tmpf),dew:r.dwpf!=null?fToC(r.dwpf):null};
+        return{label:pad(st.getHours())+':'+pad(st.getMinutes()),temp:fToC(r.tmpf),dew:r.dwpf!=null?fToC(r.dwpf):null,hour:st.getHours()};
       });
       updateFcChart();
     }).catch(function(e){console.warn('History:',e);});
 }
-
 function loadForecast(){
   fetch('https://api.open-meteo.com/v1/forecast?latitude=1.3644&longitude=103.9915&hourly=temperature_2m&timezone=auto&forecast_days=1')
     .then(function(r){return r.json();})
@@ -190,27 +176,42 @@ function loadForecast(){
       fcData=d.hourly.time.map(function(t,i){
         var dt=new Date(t+'Z');
         var ld=new Date(dt.getTime()+(offset*1000));
-        return{label:pad(ld.getUTCHours())+':'+pad(ld.getUTCMinutes()),temp:d.hourly.temperature_2m[i]};
+        return{label:pad(ld.getUTCHours())+':'+pad(ld.getUTCMinutes()),temp:d.hourly.temperature_2m[i],hour:ld.getUTCHours()};
       });
       updateFcChart();
     }).catch(function(e){console.warn('Forecast:',e);});
 }
-
 function updateFcChart(){
   var obsData=asosHistory.length>5?asosHistory:obsHistory;
   if(!fcData||obsData.length===0)return;
-  var fcL=fcData.map(function(f){return f.label;});
-  var fcT=fcData.map(function(f){return f.temp;});
+
+  // Determine current SGT hour to build a sensible window
+  var nowH=nowSGT().getHours();
+  // Show from max(0, nowH-6) to min(23, nowH+12)
+  var winStart=(nowH-6+24)%24;
+  var winEnd=(nowH+12)%24;
+
+  // Build observed map by hour (HH:00)
   var om={};
   obsData.forEach(function(o){
     var hh=o.label.slice(0,2)+':00';
     if(!om[hh])om[hh]=[];
     om[hh].push(o.temp);
   });
+
+  // Filter forecast to window: hours in range [winStart .. winStart+18]
+  var windowHours=[];
+  for(var i=0;i<18;i++){windowHours.push((winStart+i)%24);}
+  var fcFiltered=fcData.filter(function(f){return windowHours.indexOf(f.hour)!==-1;});
+
+  var fcL=fcFiltered.map(function(f){return f.label;});
+  var fcT=fcFiltered.map(function(f){return f.temp;});
+
   var obT=fcL.map(function(l){
     var a=om[l];if(!a||!a.length)return null;
     return Math.round(a.reduce(function(x,y){return x+y;},0)/a.length*10)/10;
   });
+
   var df=fcL.map(function(l,i){return obT[i]===null?null:Math.round((obT[i]-fcT[i])*10)/10;});
   var ld=null;for(var i=df.length-1;i>=0;i--){if(df[i]!==null){ld=df[i];break;}}
   var bg=document.getElementById('fcbadge');
@@ -225,8 +226,8 @@ function updateFcChart(){
   if(!fcChart){
     fcChart=new Chart(cv.getContext('2d'),{
       data:{labels:fcL,datasets:[
-        {type:'line',label:'Observed (NOAA ASOS)',data:obT,borderColor:'#4fc3f7',backgroundColor:'transparent',pointRadius:4,tension:0.3,yAxisID:'y'},
-        {type:'line',label:'Forecast (GFS / Windy)',data:fcT,borderColor:'#fb923c',backgroundColor:'transparent',borderDash:[5,3],pointRadius:3,tension:0.4,yAxisID:'y'},
+        {type:'line',label:'Observed (NOAA ASOS)',data:obT,borderColor:'#4fc3f7',backgroundColor:'transparent',borderWidth:2,pointRadius:4,tension:0.3,yAxisID:'y',spanGaps:false},
+        {type:'line',label:'Forecast (GFS / Windy)',data:fcT,borderColor:'#fb923c',backgroundColor:'transparent',borderWidth:2,borderDash:[5,3],pointRadius:3,tension:0.4,yAxisID:'y'},
         {type:'bar',label:'Difference (Obs - Fc)',data:df,backgroundColor:bc,yAxisID:'y2'}
       ]},
       options:{responsive:true,maintainAspectRatio:false,
@@ -246,13 +247,11 @@ function updateFcChart(){
     fcChart.update();
   }
 }
-
 setInterval(function(){
   var s=nowSGT();
   var cl=document.getElementById('clk');
   if(cl)cl.textContent=s.toLocaleTimeString('en-SG',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' SGT';
 },1000);
-
 setInterval(function(){
   cd--;if(cd<=0){load();cd=60;}
   var ring=document.getElementById('ring');
@@ -260,7 +259,6 @@ setInterval(function(){
   var nxt=document.getElementById('nxt');
   if(nxt)nxt.textContent='Next refresh in '+cd+'s';
 },1000);
-
 loadForecast();
 setInterval(loadForecast,1800000);
 loadAsosHistory();
