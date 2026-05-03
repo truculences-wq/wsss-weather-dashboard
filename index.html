@@ -80,13 +80,17 @@ function updateClock(){const d=new Date();document.getElementById('clk').innerTe
 updateClock();setInterval(updateClock,1000);
 function getCache(k){const c=cache[k];if(c&&Date.now()-c.t<300000)return c.d;return null;}
 function setCache(k,d){cache[k]={d,t:Date.now()};}
+function fToC(f){return((f-32)*5/9);}
 function load(){
   const b=document.getElementById('liveBadge');b.innerText='FETCHING...';
   fetch('https://mesonet.agron.iastate.edu/json/current.py?station=WSSS&network=SG__ASOS')
   .then(r=>r.json()).then(d=>{
-    const o=d.data[0];
-    document.getElementById('tmp').innerText=o.tmpf!=null?((o.tmpf-32)*5/9).toFixed(1):'--';
-    document.getElementById('dew').innerText=o.dwpf!=null?((o.dwpf-32)*5/9).toFixed(1):'--';
+    const o=d.last_ob||(d.data&&d.data[0]);
+    if(!o){b.innerText='NO DATA';return;}
+    const at=o['airtemp[F]']||o.tmpf;
+    const dt=o['dewpointtemp[F]']||o.dwpf;
+    document.getElementById('tmp').innerText=at!=null?fToC(at).toFixed(1):'--';
+    document.getElementById('dew').innerText=dt!=null?fToC(dt).toFixed(1):'--';
     document.getElementById('lobs').innerText=o.local_valid||'--';
     document.getElementById('raw').innerText=JSON.stringify(o,null,2);
     b.innerText='LIVE';updateFcChart();updatePrecipChart();
@@ -101,7 +105,7 @@ function loadHistoricalData(){
   .then(r=>r.json()).then(d=>{if(d.data){setCache('h_'+date,d.data);renderHist(d.data);}});
 }
 function renderHist(data){
-  const pts=data.filter(r=>r.tmpf!=null).map(r=>({x:r.local_valid.split('T')[1].substring(0,5),y:((r.tmpf-32)*5/9)}));
+  const pts=data.filter(r=>r.tmpf!=null).map(r=>({x:r.local_valid.split('T')[1].substring(0,5),y:fToC(r.tmpf)}));
   if(pts.length===0){return;}
   if(histChart)histChart.destroy();
   histChart=new Chart(document.getElementById('histChart'),{
@@ -121,7 +125,7 @@ function updateFcChart(){
     fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+date).then(r=>r.json())
   ]).then(([fc,obs])=>{
     const fcd=fc.hourly.time.map((t,i)=>({t:new Date(t),v:fc.hourly.temperature_2m[i]})).filter(d=>d.t>=start&&d.t<=end);
-    const obd=obs.data.filter(r=>r.tmpf!=null).map(r=>({t:new Date(r.local_valid),v:((r.tmpf-32)*5/9)})).filter(d=>d.t>=start&&d.t<=end);
+    const obd=obs.data.filter(r=>r.tmpf!=null).map(r=>({t:new Date(r.local_valid),v:fToC(r.tmpf)})).filter(d=>d.t>=start&&d.t<=end);
     if(tempChart)tempChart.destroy();
     tempChart=new Chart(document.getElementById('tempChart'),{
       type:'line',data:{labels:fcd.map(d=>d.t.getHours()+':00'),datasets:[
