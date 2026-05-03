@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WSSS Smart Weather Dashboard</title>
+<title>WSSS Smart Analytics</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<script src="https://cdn.jsdelivr.net/npm/date-fns@2.30.0/dist/date-fns.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#222222;color:#EED3BA;font-family:'Inter',sans-serif;min-height:100vh;padding:24px}
 @media(max-width:768px){body{padding:12px}}
@@ -23,8 +24,9 @@ body{background:#222222;color:#EED3BA;font-family:'Inter',sans-serif;min-height:
 .rtbn:hover{background:#CAC426;color:#222222;transform:translateY(-2px)}
 .rtbn.active{background:#CAC426;color:#222222}
 .chart-container{position:relative;height:550px;width:100%;margin-top:20px}
+@media(max-width:768px){.chart-container{height:400px}}
 .date-picker{background:#1a1a1a;color:#EED3BA;border:1px solid #444;border-radius:6px;padding:10px 15px;font-size:13px;font-weight:600}
-.time-controls{display:flex;gap:10px;margin-bottom:20px}
+.time-controls{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
 .accuracy-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-top:20px}
 .stat-box{background:#1a1a1a;padding:15px;border-radius:8px;border:1px solid #333}
 .stat-label{font-size:10px;color:#888;text-transform:uppercase;margin-bottom:5px}
@@ -63,7 +65,7 @@ body{background:#222222;color:#EED3BA;font-family:'Inter',sans-serif;min-height:
   <div class="accuracy-grid">
     <div class="stat-box"><div class="stat-label">Model Accuracy (RMSE)</div><div class="stat-val" id="rmseVal">Calculating...</div></div>
     <div class="stat-box"><div class="stat-label">Current Bias Correction</div><div class="stat-val" id="biasVal">--</div></div>
-    <div class="stat-box"><div class="stat-label">Data Status</div><div class="stat-val" style="color:#4ade80">Synchronized</div></div>
+    <div class="stat-box"><div class="stat-label">System Status</div><div class="stat-val" id="statusVal" style="color:#4ade80">Synchronized</div></div>
   </div>
 </div>
 <script>
@@ -73,6 +75,7 @@ function updateClock(){const d=new Date();document.getElementById('clk').innerTe
 updateClock();setInterval(updateClock,1000);
 function fToC(f){return((f-32)*5/9);}
 function load(){
+  document.getElementById('statusVal').innerText='Updating...';
   fetch('https://mesonet.agron.iastate.edu/json/current.py?station=WSSS&network=SG__ASOS')
   .then(r=>r.json()).then(d=>{
     const o=d.last_ob||(d.data&&d.data[0]);
@@ -81,7 +84,7 @@ function load(){
       document.getElementById('dew').innerText=fToC(o['dewpointtemp[F]']||o.dwpf).toFixed(1);
       updateUnifiedChart();
     }
-  });
+  }).catch(e=>{document.getElementById('statusVal').innerText='Network Err';document.getElementById('statusVal').style.color='#f87171';});
 }
 const dp=document.getElementById('datePicker');dp.value=new Date().toISOString().split('T')[0];
 dp.addEventListener('change',updateUnifiedChart);
@@ -116,14 +119,16 @@ function updateUnifiedChart(){
       },
       options:{
         responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-        plugins:{legend:{position:'top',align:'end',labels:{color:COLORS.gray,font:{family:'Inter',weight:600,size:10},usePointStyle:true,boxWidth:8}},tooltip:{backgroundColor:'#1a1a1a',titleColor:COLORS.gold,bodyColor:'#fff',borderColor:'#444',borderWidth:1,padding:12,titleFont:{size:12,weight:700},bodyFont:{family:'monospace'}}},
+        plugins:{legend:{position:'top',align:'end',labels:{color:COLORS.gray,font:{family:'Inter',weight:600,size:10},usePointStyle:true,boxWidth:8}},tooltip:{backgroundColor:'#1a1a1a',titleColor:COLORS.gold,bodyColor:'#fff',borderColor:'#444',borderWidth:1,padding:12}},
         scales:{
           x:{type:'time',time:{unit:'hour',displayFormats:{hour:'HH:mm
-MMM d'}},grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:COLORS.gray,font:{size:10}}},
+MMM d'}},grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:COLORS.gray,font:{size:10},autoSkip:true,maxTicksLimit:12}},
           y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:COLORS.gray,font:{size:10}},title:{display:true,text:'TEMPERATURE (°C)',color:COLORS.gray,font:{size:9,weight:700,letterSpacing:1}}}
         }
       }
     });
+    document.getElementById('statusVal').innerText='Synchronized';
+    document.getElementById('statusVal').style.color='#4ade80';
     const common=obd.filter(o=>fcd.some(g=>g.t.getTime()===o.t.getTime()));
     if(common.length>0){
       const err=Math.sqrt(common.reduce((s,o)=>{const g=fcd.find(x=>x.t.getTime()===o.t.getTime());return s+Math.pow(o.v-g.v,2);},0)/common.length);
