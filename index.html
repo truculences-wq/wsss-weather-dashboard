@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>WSSS Smart Meteogram</title>
+<title>WSSS Analytics Pro</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/date-fns@3.0.0/cdn.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
@@ -44,9 +44,7 @@ body{background:#222222;color:#EED3BA;font-family:'Inter',sans-serif;overflow-x:
   <div style="font-size:12px;color:#888">Swipe/Scroll right to explore 7-day forecast axis &gt;</div>
 </div>
 <div class="meteogram-scroll" id="scrollContainer">
-  <div class="chart-wrapper">
-    <canvas id="mainChart"></canvas>
-  </div>
+  <div class="chart-wrapper"><canvas id="mainChart"></canvas></div>
 </div>
 <script>
 let mainChart;
@@ -63,8 +61,8 @@ function load(){
       document.getElementById('tmp').innerHTML=`${fToC(o['airtemp[F]']||o.tmpf).toFixed(1)}<span>°C</span>`;
       document.getElementById('dew').innerHTML=`${fToC(o['dewpointtemp[F]']||o.dwpf).toFixed(1)}<span>°C</span>`;
       updateMeteogram();
-    }
-  }).catch(e=>{status.innerText='API Offline';status.style.color='#f87171';});
+    }else{throw new Error('No Data');}
+  }).catch(e=>{status.innerText='API Offline';status.style.color='#f87171';updateMeteogram();});
 }
 const dp=document.getElementById('datePicker');dp.value=new Date().toISOString().split('T')[0];
 dp.addEventListener('change',updateMeteogram);
@@ -72,21 +70,21 @@ function updateMeteogram(){
   const now=new Date();const date=dp.value;
   Promise.all([
     fetch('https://api.open-meteo.com/v1/forecast?latitude=1.35&longitude=103.99&hourly=temperature_2m&timezone=Asia/Singapore&forecast_days=7').then(r=>r.json()),
-    fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+date).then(r=>r.json())
+    fetch('https://mesonet.agron.iastate.edu/api/1/obhistory.json?station=WSSS&network=SG__ASOS&date='+date).then(r=>r.json()).catch(e=>({data:[]}))
   ]).then(([fc,obs])=>{
     const fcd=fc.hourly.time.map((t,i)=>({t:new Date(t),v:fc.hourly.temperature_2m[i]}));
     const obd=(obs.data||[]).filter(r=>r.tmpf!=null).map(r=>({t:new Date(r.local_valid),v:fToC(r.tmpf)}));
     const lastObs=obd[obd.length-1]||{v:fcd[0].v,t:now};
-    const matchingGfs=fcd.find(g=>Math.abs(g.t-lastObs.t)<1800000);
+    const matchingGfs=fcd.find(g=>Math.abs(g.t-lastObs.t)<3600000);
     const bias=matchingGfs?lastObs.v-matchingGfs.v:0;
     const pd=fcd.filter(d=>d.t>=lastObs.t).map((p,i)=>{const d=Math.exp(-i/10);return{t:p.t,v:p.v+(bias*d)};});
     if(mainChart)mainChart.destroy();
     mainChart=new Chart(document.getElementById('mainChart'),{
       type:'line',data:{
         datasets:[
-          {label:'METAR OBSERVED',data:obd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.apricot,borderWidth:4,pointRadius:0,fill:false,tension:0.2,z:3},
-          {label:'SMART PREDICTION',data:pd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.cyan,borderWidth:4,pointRadius:0,fill:false,tension:0.4,z:2},
-          {label:'GFS BASELINE',data:fcd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.gold,borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false,z:1}
+          {label:'METAR OBSERVED',data:obd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.apricot,borderWidth:4,pointRadius:0,fill:false,tension:0.2},
+          {label:'SMART PREDICTION',data:pd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.cyan,borderWidth:4,pointRadius:0,fill:false,tension:0.4},
+          {label:'GFS BASELINE',data:fcd.map(d=>({x:d.t,y:d.v})),borderColor:COLORS.gold,borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false}
         ]
       },
       options:{
@@ -100,7 +98,7 @@ EEE d'}},grid:{color:COLORS.grid},ticks:{color:COLORS.gray,font:{size:12,weight:
       }
     });
     document.getElementById('status').innerText='Active';document.getElementById('status').style.color='#4ade80';
-    if(obd.length>0 && fcd.length>0){
+    if(obd.length>0){
       const common=obd.filter(o=>fcd.some(g=>Math.abs(g.t-o.t)<300000));
       if(common.length>0){
         const rmse=Math.sqrt(common.reduce((s,o)=>{const g=fcd.find(x=>Math.abs(x.t-o.t)<300000);return s+Math.pow(o.v-g.v,2);},0)/common.length);
